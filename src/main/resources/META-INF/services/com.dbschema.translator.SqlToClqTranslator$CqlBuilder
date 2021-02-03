@@ -1,0 +1,7 @@
+com.cassandrajdbc.translator.impl.CreateTable
+com.cassandrajdbc.translator.impl.AlterTable
+com.cassandrajdbc.translator.impl.Insert
+com.cassandrajdbc.translator.impl.Update
+com.cassandrajdbc.translator.impl.Delete
+com.cassandrajdbc.translator.impl.Truncate
+com.cassandrajdbc.translator.impl.Select
