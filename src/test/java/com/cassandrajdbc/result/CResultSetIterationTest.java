@@ -7,15 +7,12 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.oneOf;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -23,7 +20,6 @@ import java.util.stream.IntStream;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.cassandrajdbc.connection.CassandraConnection;
@@ -43,7 +39,7 @@ public class CResultSetIterationTest {
     public static void connect() {
         connection = new CassandraConnection(Cluster.builder()
             .addContactPoint("localhost")
-            .build().connect());
+            .build().connect(), null);
         connection.getSession().execute("DROP KEYSPACE IF EXISTS " + KEYSPACE_NAME);
         connection.getSession().execute("CREATE KEYSPACE " + KEYSPACE_NAME
             + " WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");

@@ -21,6 +21,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import com.cassandrajdbc.CClientInfo;
+import com.cassandrajdbc.CassandraURL;
 import com.cassandrajdbc.result.CResultSet;
 import com.cassandrajdbc.result.CResultSetMetaData;
 import com.cassandrajdbc.statement.CPreparedStatement;
@@ -35,10 +36,10 @@ import com.datastax.driver.core.TableOptionsMetadata;
 
 class CDatabaseMetaData implements DatabaseMetaData {
 
-    private final String connectionUrl;
+    private final CassandraURL connectionUrl;
     private final CassandraConnection connection;
 
-    public CDatabaseMetaData(String connectionUrl, CassandraConnection connection) {
+    public CDatabaseMetaData(CassandraURL connectionUrl, CassandraConnection connection) {
         this.connectionUrl = connectionUrl;
         this.connection = connection;
     }
@@ -68,7 +69,9 @@ class CDatabaseMetaData implements DatabaseMetaData {
 
     @Override
     public String getURL() throws SQLException {
-        return connectionUrl;
+        return Optional.ofNullable(connectionUrl)
+            .map(CassandraURL::getRawUrl)
+            .orElse(null);
     }
 
     @Override

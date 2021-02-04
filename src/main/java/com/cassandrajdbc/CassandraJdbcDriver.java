@@ -28,7 +28,7 @@ public class CassandraJdbcDriver implements Driver {
     
     static {
         try {
-            DriverManager.registerDriver( new CassandraJdbcDriver());
+            DriverManager.registerDriver(new CassandraJdbcDriver());
         } catch (SQLException ex){
             logger.error("Failed to register jdbc driver", ex);
         }
@@ -40,7 +40,7 @@ public class CassandraJdbcDriver implements Driver {
             .orElseThrow(() -> new  IllegalArgumentException("Invalid cassandra url " + url + ""));
         var connection = CassandraConnectionFactory.instance()
             .create(cassandraUrl, info);
-        return new CassandraConnection(connection.getSession());
+        return new CassandraConnection(connection.getSession(), cassandraUrl);
     }
 
     @Override

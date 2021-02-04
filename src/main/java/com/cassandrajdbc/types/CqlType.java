@@ -97,6 +97,7 @@ public class CqlType {
     
     public static DataType from(ColDataType type) {
         return resolveType(t -> t.getSqlType().getName().equalsIgnoreCase(type.getDataType()))
+            .or(() -> resolveType(t -> t.getCqlType().getName().name().equalsIgnoreCase(type.getDataType())))
             .orElseThrow(() -> new IllegalArgumentException("Unsupported data type " + type.getDataType() + ", please register TypeMapping for this type"))
             .getCqlType();
     }
@@ -108,6 +109,7 @@ public class CqlType {
 
     public static TypeInfo resolve(String typeName) {
         return resolveType(t -> t.getSqlType().getName().equals(typeName))
+            .or(() -> resolveType(t -> t.getCqlType().getName().name().equalsIgnoreCase(typeName)))
             .orElseThrow(() -> new IllegalArgumentException("Unsupported data type " + typeName + ", please register TypeMapping for this type"));
     }
 

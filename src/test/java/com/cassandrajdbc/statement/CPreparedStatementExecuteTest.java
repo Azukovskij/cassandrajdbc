@@ -40,7 +40,7 @@ public class CPreparedStatementExecuteTest {
     public static void connect() {
         connection = new CassandraConnection(Cluster.builder()
             .addContactPoint("localhost")
-            .build().connect());
+            .build().connect(), null);
         connection.getSession().execute("CREATE KEYSPACE IF NOT EXISTS " + KEYSPACE_NAME
             + " WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
         connection.getSession().execute("DROP TABLE IF EXISTS " + TABLE_NAME);
@@ -65,11 +65,11 @@ public class CPreparedStatementExecuteTest {
             {createData(1), null, new MethodPointer("execute", "UPDATE " + TABLE_NAME + " SET DATA='3' WHERE ID='1'"), equalTo(false)},
             {nodata(), null, new MethodPointer("execute", "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + "2 (ID VARCHAR, PRIMARY KEY (ID))"), equalTo(false)},
             // executeUpdate
-            {createData(1), "UPDATE " + TABLE_NAME + " SET DATA='3' WHERE ID='1'", new MethodPointer("executeUpdate"), equalTo(0)},
-            {createData(1), null, new MethodPointer("executeUpdate", "UPDATE " + TABLE_NAME + " SET DATA='3' WHERE ID='1'"), equalTo(0)},
-            {createData(1), null, new MethodPointer("executeUpdate", "UPDATE " + TABLE_NAME + " SET DATA='3' WHERE ID='1'", 1), equalTo(0)},
-            {createData(1), null, new MethodPointer("executeUpdate", "UPDATE " + TABLE_NAME + " SET DATA='3' WHERE ID='1'", new int[] {1}), equalTo(0)},
-            {createData(1), null, new MethodPointer("executeUpdate", "UPDATE " + TABLE_NAME + " SET DATA='3' WHERE ID='1'", new String[] {"ID"}), equalTo(0)},
+            {createData(1), "UPDATE " + TABLE_NAME + " SET DATA='3' WHERE ID='1'", new MethodPointer("executeUpdate"), equalTo(1)},
+            {createData(1), null, new MethodPointer("executeUpdate", "UPDATE " + TABLE_NAME + " SET DATA='3' WHERE ID='1'"), equalTo(1)},
+            {createData(1), null, new MethodPointer("executeUpdate", "UPDATE " + TABLE_NAME + " SET DATA='3' WHERE ID='1'", 1), equalTo(1)},
+            {createData(1), null, new MethodPointer("executeUpdate", "UPDATE " + TABLE_NAME + " SET DATA='3' WHERE ID='1'", new int[] {1}), equalTo(1)},
+            {createData(1), null, new MethodPointer("executeUpdate", "UPDATE " + TABLE_NAME + " SET DATA='3' WHERE ID='1'", new String[] {"ID"}), equalTo(1)},
             // executeBatch
             {createToBatch(3), null, new MethodPointer("executeBatch"), equalTo(new int[]{-2, -2, -2})},
             {nodata().andThen(PreparedStatement::addBatch), "INSERT INTO " + TABLE_NAME + "(ID,DATA) VALUES('b','b')", new MethodPointer("executeBatch"), equalTo(new int[]{-2})},

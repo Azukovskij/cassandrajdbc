@@ -55,11 +55,9 @@ import com.cassandrajdbc.types.codec.StringReaderCodec;
 import com.cassandrajdbc.types.codec.StringStreamCodec;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.CodecRegistry;
-import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.exceptions.DriverException;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharStreams;
@@ -132,7 +130,8 @@ public class CPreparedStatement implements PreparedStatement {
     }
 
     public Statement prepareStatement(String sql, List<Object> params) {
-        Statement stmt = params.isEmpty() ?  new SimpleStatement(sql) : new BoundStatement(connection.getSession().prepare(sql))
+        String cql = connection.toSql(sql);
+        Statement stmt = params.isEmpty() ?  new SimpleStatement(cql) : new BoundStatement(connection.getSession().prepare(cql))
             .bind(params.toArray(Object[]::new));
         stmt.setReadTimeoutMillis(queryTimeoutSec);
         stmt.setFetchSize(fetchSize);
@@ -182,7 +181,7 @@ public class CPreparedStatement implements PreparedStatement {
 //          } 
             resultSet = sql.isBlank() ? new CResultSet(this) :
                 new CResultSet(this, getMetadata(sql), executeInternal(sql));
-        } catch (DriverException e) {
+        } catch (DriverException | UnsupportedOperationException e) {
             throw new SQLException("Cassandra error", e);
         } finally {
             if(lastResultSet != null) {
@@ -201,7 +200,7 @@ public class CPreparedStatement implements PreparedStatement {
 
     @Override
     public int executeUpdate(String sql) throws SQLException {
-        return executeQuery(sql).hasNext() ? 1 : 0;
+        return executeQuery(sql).hasNext() || sql.startsWith("UPDATE") ? 1 : 0;
     }
 
     @Override
@@ -229,7 +228,7 @@ public class CPreparedStatement implements PreparedStatement {
             for(List<Statement> batch : Lists.partition(IntStream.range(0, batchStatements.size())
                     .mapToObj(i -> prepareStatement(batchStatements.get(i), batchParams.get(i)))
                     .collect(Collectors.toList()), 100)) {
-                connection.getSession().execute(QueryBuilder.unloggedBatch(batch.toArray(RegularStatement[]::new)));
+                batch.forEach(connection.getSession()::execute);
             }
             return batchStatements.stream().mapToInt(sql -> SUCCESS_NO_INFO).toArray();
         } catch (DriverException e) {
@@ -379,7 +378,7 @@ public class CPreparedStatement implements PreparedStatement {
         return getMetadata(preparedStatement);
     }
 
-    public CResultSetMetaData getMetadata(String sql) {
+    public CResultSetMetaData getMetadata(String sql) throws SQLException {
         return CResultSetMetaData.Parser.parse(sql, 
             connection.getSession().getCluster().getMetadata());
     }

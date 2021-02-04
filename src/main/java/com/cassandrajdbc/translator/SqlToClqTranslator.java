@@ -24,9 +24,7 @@ public class SqlToClqTranslator {
     public static RegularStatement translateToCQL(Statement statement) {
         return Optional.ofNullable(builders.get(statement.getClass()))
             .map(builder -> ((CqlBuilder<Statement>)builder).buildCql(statement, stmtConfig))
-//            .orElseThrow(() -> new UnsupportedOperationException())
-            .orElse(null)
-            ;
+            .orElse(null);
     }
     
     public interface CqlBuilder<T extends Statement> {

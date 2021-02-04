@@ -24,6 +24,7 @@ import java.util.UUID;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.cassandrajdbc.CassandraURL;
 import com.cassandrajdbc.test.util.ResultSetMatcher.CheckedFunction;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.DataType;
@@ -42,7 +43,7 @@ public class CDatabaseMetaDataTest {
     public static void connect() {
         connection = new CassandraConnection(Cluster.builder()
             .addContactPoint("localhost")
-            .build().connect());
+            .build().connect(), null);
         connection.getSession().execute("CREATE KEYSPACE IF NOT EXISTS " + KEYSPACE_NAME
             + " WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
         connection.getSession().execute("CREATE TABLE IF NOT EXISTS "
@@ -133,7 +134,7 @@ public class CDatabaseMetaDataTest {
     }
 
     public CDatabaseMetaData getMetadata() {
-        return new CDatabaseMetaData("jdbc:cassandra://localhost:9042", connection);
+        return new CDatabaseMetaData(CassandraURL.create("jdbc:cassandra://localhost:9042").get(), connection);
     }
 
 }

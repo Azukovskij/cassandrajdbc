@@ -10,19 +10,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.cassandrajdbc.statement.StatementOptions.Collation;
+import com.cassandrajdbc.translator.CqlToSqlParser;
 import com.cassandrajdbc.types.CqlType;
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.DataType;
+import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.TableMetadata;
 
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.StatementVisitorAdapter;
@@ -221,8 +225,8 @@ public class CResultSetMetaData implements ResultSetMetaData {
             this.name = name;
             this.label = label;
             this.nullable = nullable;
-            this.type = CqlType.from(type);
-            this.valueType = CqlType.asJavaType(type);
+            this.type = Optional.ofNullable(type).map(CqlType::from).orElse(null);
+            this.valueType = Optional.ofNullable(type).map(CqlType::asJavaType).orElse(null);
         }
         
     }
@@ -235,24 +239,50 @@ public class CResultSetMetaData implements ResultSetMetaData {
      */
     public static final class Parser extends StatementVisitorAdapter implements SelectVisitor {
         
+        private static final Pattern FALLBACK_PARSE_PATTERN = Pattern.compile("SELECT.*(COUNT|count)?.*FROM ([^\\.]*)\\.([^ ]+).*");
+
         private final List<Column> columns = new ArrayList<>();
         private final Metadata metadata;
         
-        public static CResultSetMetaData parse(String sql, Metadata metadata) {
+        public static CResultSetMetaData parse(String sql, Metadata metadata) throws SQLException {
             if(sql == null) {
                 return new CResultSetMetaData(new Column[0], metadata);
             }
             try {
                 Parser parser = new Parser(metadata);
                 Statement stmt;
-                stmt = CCJSqlParserUtil.parse(sql);
+                stmt = CqlToSqlParser.parse(sql);
                 stmt.accept(parser);
                 return new CResultSetMetaData(parser.columns.toArray(Column[]::new), metadata);
             } catch (JSQLParserException e) {
-                return new CResultSetMetaData(new Column[0], metadata);
+                return new CResultSetMetaData(parseColumnsAsRegExp(sql, metadata), metadata);
+            } catch (IllegalStateException e) {
+                throw new SQLException(e);
             }
         }
-        
+
+        private static Column[] parseColumnsAsRegExp(String sql, Metadata metadata) {
+            var matcher = FALLBACK_PARSE_PATTERN.matcher(sql);
+            if (!matcher.matches()) {
+                return new Column[0];
+            }
+            return Optional.of(matcher.group(2))
+                .filter(str -> !str.isBlank())
+                .map(metadata::getKeyspace)
+                .map(keyspace -> keyspace.getTable(matcher.group(3)))
+                .map(table -> {
+                    var tb = new Table(table.getKeyspace().getName(), table.getName());
+                    if(matcher.group(1) != null) { // count
+                        return new Column[] { new Column(tb, "count", "count", columnNoNulls, DataType.bigint())};
+                    }
+                    return table.getColumns().stream()
+                        .map(cm -> new Column(tb, cm.getName(), cm.getName(), columnNullableUnknown, cm.getType()))
+                        .toArray(Column[]::new);
+                })
+                .orElseGet(() -> new Column[0]);
+
+        }
+
         private Parser(Metadata metadata) {
             this.metadata = metadata;
         }
@@ -275,7 +305,7 @@ public class CResultSetMetaData implements ResultSetMetaData {
         @Override
         public void visit(PlainSelect plainSelect) {
             SelectVisitor parser = new SelectVisitor();
-            plainSelect.getFromItem().accept(parser);
+            Optional.ofNullable(plainSelect.getFromItem()).ifPresent(from -> from.accept(parser));
             plainSelect.getSelectItems().forEach(item -> item.accept(parser));
             this.columns.addAll(parser.columns);
         }
@@ -322,6 +352,8 @@ public class CResultSetMetaData implements ResultSetMetaData {
                      ColumnMetadata c = this.table.getColumn(((net.sf.jsqlparser.schema.Column) expression).getColumnName());
                      this.columns.add(new Column(table, c.getName(), getAlias(item, c.getName()), 
                         this.table.getPrimaryKey().contains(c) ? columnNoNulls : columnNullable, c.getType()));
+                } else if(item.getExpression() instanceof Function && "COUNT".equals(((Function)item.getExpression()).getName())) {
+                    this.columns.add(new Column(table, "count", "count", columnNoNulls, DataType.bigint()));
                 } else {
                     String name = getAlias(item, null);
                     this.columns.add(new Column(table, name, name, columnNoNulls, null));

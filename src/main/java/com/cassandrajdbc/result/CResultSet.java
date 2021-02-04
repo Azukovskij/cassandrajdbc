@@ -38,6 +38,7 @@ import java.util.stream.IntStream;
 
 import com.cassandrajdbc.types.SerialNClob;
 import com.datastax.driver.core.DataType;
+import com.datastax.driver.core.LocalDate;
 import com.google.common.collect.Iterators;
 
 public class CResultSet implements ResultSet {
@@ -138,7 +139,7 @@ public class CResultSet implements ResultSet {
     
     @Override
     public void setFetchSize(int rows) throws SQLException {
-        throw new UnsupportedOperationException("Fetch size can not be modified on result-set object");
+        getStatement().setFetchSize(rows);
     }
 
     @Override
@@ -254,6 +255,10 @@ public class CResultSet implements ResultSet {
     @Override
     public int getFetchDirection() throws SQLException {
         return direction;
+    }
+    
+    public Iterator<Row> iterator() {
+        return iterator;
     }
 
     private boolean nextElement() {
@@ -387,6 +392,12 @@ public class CResultSet implements ResultSet {
         Object object = currentRow.values.apply(columnIndex - 1, type);
         if(object != null && !type.isInstance(object)) {
             throw new SQLException("Column is not of expected type got " + object.getClass() + " expecting " + type);
+        }
+        if(object instanceof LocalDate && type.isAssignableFrom(Date.class)) {
+            return (T) getDate(columnIndex);
+        }
+        if(object instanceof java.util.Date && !(object instanceof Timestamp) && type.isAssignableFrom(Timestamp.class)) {
+            return (T) getTimestamp(columnIndex);
         }
         return (T) object;
     }
@@ -1174,6 +1185,18 @@ public class CResultSet implements ResultSet {
         Row(int index, com.datastax.driver.core.Row row) {
             this.index = index + 1;
             this.values = (i,t) -> Object.class.equals(t) ? row.getObject(i) : row.get(i, t);
+        }
+        
+        @SuppressWarnings("unchecked")
+        public <T> T getColumn(int idx, Class<T> type) {
+            Object res = values.apply(idx, type);
+            if(res instanceof LocalDate && type.isAssignableFrom(Date.class)) {
+                return (T) values.apply(idx, Date.class);
+            }
+            if(res instanceof java.util.Date && !(res instanceof Timestamp) && type.isAssignableFrom(Timestamp.class)) {
+                return (T) values.apply(idx, Timestamp.class);
+            }
+            return (T) res;
         }
 
     }

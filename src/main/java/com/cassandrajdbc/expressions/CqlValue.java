@@ -24,6 +24,7 @@ import net.sf.jsqlparser.expression.ExtractExpression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.HexValue;
 import net.sf.jsqlparser.expression.IntervalExpression;
+import net.sf.jsqlparser.expression.JdbcParameter;
 import net.sf.jsqlparser.expression.JsonExpression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.NullValue;
@@ -63,6 +64,8 @@ import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.SubSelect;
 
 public class CqlValue {
+    
+    public static final String PARAM = "?param?";
 
     public static List<Object[]> toCqlValueList(ItemsList itemList) {
         ValueListExtractor extractor = new ValueListExtractor();
@@ -122,6 +125,13 @@ public class CqlValue {
         @Override
         public void visit(StringValue stringValue) {
             value = stringValue.getValue();
+            if(stringValue.getValue().matches("\\d{4}-\\d{2}-\\d{2}")) {
+                value = java.time.LocalDate.parse(stringValue.getValue())
+                    .minusMonths(1)
+                    .format(java.time.format.DateTimeFormatter.ISO_DATE); // new java.sql.Date constructor month starting with 0 fix (inconsistency between string->date and date->date inserts) 
+            } else {
+                value = stringValue.getValue();
+            }
         }
         
         @Override
@@ -163,6 +173,11 @@ public class CqlValue {
             } else {
                 unknown(column);
             }
+        }
+
+        @Override
+        public void visit(JdbcParameter param) {
+            value = PARAM;
         }
 
         @Override

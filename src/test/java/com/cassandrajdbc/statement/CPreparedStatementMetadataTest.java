@@ -29,7 +29,7 @@ public class CPreparedStatementMetadataTest {
     public static void connect() {
         connection = new CassandraConnection(Cluster.builder()
             .addContactPoint("localhost")
-            .build().connect());
+            .build().connect(), null);
         connection.getSession().execute("CREATE KEYSPACE IF NOT EXISTS " + KEYSPACE_NAME
             + " WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
         connection.getSession().execute("DROP TABLE IF EXISTS " + TABLE_NAME);

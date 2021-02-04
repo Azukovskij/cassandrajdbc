@@ -23,6 +23,7 @@ public final class CassandraURL {
     private final List<Either<InetAddress, InetSocketAddress>> contactPoints;
     private final String defaultKeyspace;
     private final Properties properties;
+    private final String rawUrl;
     
     public static Optional<CassandraURL> create(String connectionUri) {
         return Optional.ofNullable(connectionUri)
@@ -30,14 +31,15 @@ public final class CassandraURL {
             .map(uri -> uri.substring(SCHEME.length()).split(QUERY_STR_SEPARATOR))
             .flatMap(p1 -> Optional.of(p1[0])
                 .map(cp -> cp.split(KEYSPACE_SEPARATOR))
-                .map(p2 -> new CassandraURL(p2[0], secondValue(p2), secondValue(p1))));
+                .map(p2 -> new CassandraURL(connectionUri, p2[0], secondValue(p2), secondValue(p1))));
     }
 
     private static String secondValue(String[] array) {
         return array.length < 2 ? null : array[1];
     }
 
-    private CassandraURL(String contactPoints, String defaultKeyspace, String queryString) {
+    private CassandraURL(String rawUrl, String contactPoints, String defaultKeyspace, String queryString) {
+        this.rawUrl = rawUrl;
         this.contactPoints = Arrays.stream(contactPoints.split(CONTACT_POINT_SEPARATOR))
             .map(this::parseHost)
             .collect(Collectors.toList());
@@ -77,6 +79,10 @@ public final class CassandraURL {
     
     public Properties getProperties() {
         return properties;
+    }
+    
+    public String getRawUrl() {
+        return rawUrl;
     }
 
 }

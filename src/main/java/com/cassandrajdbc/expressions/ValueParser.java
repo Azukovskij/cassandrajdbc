@@ -103,7 +103,7 @@ public class ValueParser extends ExpressionVisitorAdapter {
                 values.add(true);
                 break;
             case "FALSE":
-                values.add(true);
+                values.add(false);
                 break;
             default:
                 unknown(column);

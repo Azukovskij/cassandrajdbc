@@ -23,7 +23,13 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.cassandrajdbc.CassandraURL;
+import com.cassandrajdbc.expressions.CqlValue;
 import com.cassandrajdbc.statement.CPreparedStatement;
+import com.cassandrajdbc.translator.CqlToSqlParser;
 import com.cassandrajdbc.translator.SqlToClqTranslator;
 import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.Session;
@@ -33,15 +39,19 @@ import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 
 public class CassandraConnection implements Connection {
     
+    private final Logger logger = LoggerFactory.getLogger(CassandraConnection.class);
+    
     private final Session session;
+    private final CassandraURL connectionUrl;
+
     private String defaultSchema;
     private Properties clientInfo;
     private String catalog;
     private boolean readOnly;
-    private String connectionUrl;
 
-    public CassandraConnection(Session session) {
+    public CassandraConnection(Session session, CassandraURL connectionUrl) {
         this.session = session;
+        this.connectionUrl = connectionUrl;
     }
 
     @Override
@@ -52,22 +62,21 @@ public class CassandraConnection implements Connection {
     @Override
     public String nativeSQL(String sql) throws SQLException {
         checkClosed();
+        return toSql(sql);
+    }
+
+    public String toSql(String sql) {
         try {
-            RegularStatement translateToCQL = SqlToClqTranslator.translateToCQL(CCJSqlParserUtil.parse(normalizeSql(sql)));
-            if(translateToCQL != null) {
-                System.out.println(translateToCQL);
-                return translateToCQL.toString();
+            var translated = SqlToClqTranslator.translateToCQL(CqlToSqlParser.parse(sql));
+            if(translated != null) {
+                logger.debug("Translated query {}", translated);
+                return translated.toString()
+                    .replace("'" + CqlValue.PARAM + "'", "?");
             }
-        } catch (JSQLParserException e) {
-//            e.printStackTrace();
-//            throw new SQLException("Invalid query", e);
         } catch (Exception e) {
-//            e.printStackTrace();
-            // TODO: handle exception
+            logger.trace("SQL parse failed", e);
         }
-//      net.sf.jsqlparser.parser.CCJSqlParserUtil.parse(sql)
-        System.out.println(sql + " >>>>>> " + sql);
-        // TODO Auto-generated method stub
+        logger.debug("CQ statement passthrough {}", sql);
         return sql;
     }
     
