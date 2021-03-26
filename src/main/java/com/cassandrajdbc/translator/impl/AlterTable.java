@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 
 import com.cassandrajdbc.statement.StatementOptions;
 import com.cassandrajdbc.statement.StatementOptions.Collation;
+import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
 import com.cassandrajdbc.types.CqlType;
 import com.datastax.driver.core.RegularStatement;
@@ -27,7 +28,7 @@ public class AlterTable implements CqlBuilder<net.sf.jsqlparser.statement.alter.
     }
 
     @Override
-    public RegularStatement buildCql(net.sf.jsqlparser.statement.alter.Alter stmt, StatementOptions config) {
+    public RegularStatement buildCql(net.sf.jsqlparser.statement.alter.Alter stmt, ClusterConfiguration config) {
         Alter alter = SchemaBuilder.alterTable(stmt.getTable().getSchemaName(), escape(stmt.getTable().getName(), config));
         return stmt.getAlterExpressions().stream()
             .flatMap(expression -> stream(expression)
@@ -36,7 +37,7 @@ public class AlterTable implements CqlBuilder<net.sf.jsqlparser.statement.alter.
             .orElseThrow(() -> new IllegalStateException("No columns in alter " + stmt));
     }
 
-    private SchemaStatement alterColumn(Alter alter, AlterOperation operation, ColumnDataType column, StatementOptions config) {
+    private SchemaStatement alterColumn(Alter alter, AlterOperation operation, ColumnDataType column, ClusterConfiguration config) {
         switch (operation) {
             case ADD:
                 return alter.addColumn(escape(column.getColumnName(), config))
@@ -54,8 +55,8 @@ public class AlterTable implements CqlBuilder<net.sf.jsqlparser.statement.alter.
             .orElseGet(() -> Stream.of(col.new ColumnDataType(col.getColumnName(), null)));
     }
     
-    private String escape(String value, StatementOptions config) {
-        return config.getCollation() == Collation.CASE_SENSITIVE ? "\"" + value + "\"" : value;
+    private String escape(String value, ClusterConfiguration config) {
+        return config.getStatementOptions().getCollation() == Collation.CASE_SENSITIVE ? "\"" + value + "\"" : value;
     }
 
 }

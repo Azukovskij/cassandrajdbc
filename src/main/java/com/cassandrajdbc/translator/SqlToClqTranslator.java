@@ -9,8 +9,12 @@ import java.util.stream.Collectors;
 
 import com.cassandrajdbc.statement.StatementOptions;
 import com.cassandrajdbc.util.SPI;
+import com.datastax.driver.core.ColumnMetadata;
+import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.RegularStatement;
+import com.datastax.driver.core.TableMetadata;
 
+import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.Statement;
 
 public class SqlToClqTranslator {
@@ -18,12 +22,11 @@ public class SqlToClqTranslator {
     private final static Map<Class<?>, CqlBuilder<?>> builders = SPI.loadAll(CqlBuilder.class)
                     .collect(Collectors.toUnmodifiableMap(CqlBuilder::getInputType, Function.identity(), (a,b) -> a));
     
-    private static final StatementOptions stmtConfig = new StatementOptions();
     
-    
-    public static RegularStatement translateToCQL(Statement statement) {
+    public static RegularStatement translateToCQL(Statement statement, Metadata clusterMetadata) {
+        ClusterConfiguration clusterConfig = new ClusterConfiguration(clusterMetadata, new StatementOptions());
         return Optional.ofNullable(builders.get(statement.getClass()))
-            .map(builder -> ((CqlBuilder<Statement>)builder).buildCql(statement, stmtConfig))
+            .map(builder -> ((CqlBuilder<Statement>)builder).buildCql(statement, clusterConfig))
             .orElse(null);
     }
     
@@ -31,7 +34,42 @@ public class SqlToClqTranslator {
         
         Class<? extends T> getInputType();
         
-        RegularStatement buildCql(T stmt, StatementOptions config);
+        RegularStatement buildCql(T stmt, ClusterConfiguration config);
+        
+    }
+    
+    public static class ClusterConfiguration {
+        
+        private final Metadata clusterMetadata;
+        private final StatementOptions statementOptions;
+
+        ClusterConfiguration(Metadata clusterMetadata, StatementOptions statementOptions) {
+            this.clusterMetadata = clusterMetadata;
+            this.statementOptions = statementOptions;
+        }
+
+        public Metadata getClusterMetadata() {
+            return clusterMetadata;
+        }
+        
+        public TableMetadata getTableMetadata(Table table) {
+            return Optional.ofNullable(clusterMetadata.getKeyspace(table.getSchemaName()))
+                .map(ks -> Optional.ofNullable(ks.getTable(table.getName()))
+                    .orElseGet(() -> ks.getTable("\"" + table.getName() + "\"")))
+                .orElseThrow(() -> new IllegalArgumentException("Table does not exist " + table.getFullyQualifiedName()));
+        }
+        
+        public ColumnMetadata getColumnMetadata(TableMetadata table, String columnName) {
+            return Optional.of(table)
+                .map(tableMetdata -> Optional.ofNullable(tableMetdata.getColumn(columnName))
+                    .orElseGet(() -> tableMetdata.getColumn("\"" + columnName + "\"")))
+                .orElseThrow(() -> new IllegalArgumentException("Column does not exist " + 
+                    table.getKeyspace().getName() + "." + table.getName() + "." + "." + columnName));
+        }
+        
+        public StatementOptions getStatementOptions() {
+            return statementOptions;
+        }
         
     }
 

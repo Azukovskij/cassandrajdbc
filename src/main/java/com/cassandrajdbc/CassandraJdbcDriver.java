@@ -15,6 +15,18 @@ import org.slf4j.LoggerFactory;
 
 import com.cassandrajdbc.connection.CassandraConnection;
 import com.cassandrajdbc.connection.CassandraConnectionFactory;
+import com.cassandrajdbc.types.codec.BlobCodec;
+import com.cassandrajdbc.types.codec.ByteArrayCodec;
+import com.cassandrajdbc.types.codec.ClobCodec;
+import com.cassandrajdbc.types.codec.InputStreamCodec;
+import com.cassandrajdbc.types.codec.SqlDateCodec;
+import com.cassandrajdbc.types.codec.SqlTimeCodec;
+import com.cassandrajdbc.types.codec.SqlTimestampCodec;
+import com.cassandrajdbc.types.codec.StringReaderCodec;
+import com.cassandrajdbc.types.codec.StringStreamCodec;
+import com.cassandrajdbc.types.codec.TypeCastingCodec;
+import com.datastax.driver.core.CodecRegistry;
+import com.datastax.driver.core.TypeCodec;
 
 
 /**
@@ -23,6 +35,8 @@ import com.cassandrajdbc.connection.CassandraConnectionFactory;
  *
  */
 public class CassandraJdbcDriver implements Driver {
+
+    private static final String TYPE_CASTING_ENABLED = "cassandrajdbcdriver.string.casting.enabled";
     
     private static final Logger logger = LoggerFactory.getLogger(CassandraJdbcDriver.class);
     
@@ -40,6 +54,7 @@ public class CassandraJdbcDriver implements Driver {
             .orElseThrow(() -> new  IllegalArgumentException("Invalid cassandra url " + url + ""));
         var connection = CassandraConnectionFactory.instance()
             .create(cassandraUrl, info);
+        configureCodecs(info, connection);
         return new CassandraConnection(connection.getSession(), cassandraUrl);
     }
 
@@ -72,5 +87,16 @@ public class CassandraJdbcDriver implements Driver {
     public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
         throw new SQLFeatureNotSupportedException();
     }
+
+    private void configureCodecs(Properties info, CassandraConnection connection) {
+        CodecRegistry registry = connection.getSession().getCluster().getConfiguration().getCodecRegistry();
+        if("true".equalsIgnoreCase(info.getProperty(TYPE_CASTING_ENABLED, "true"))) {
+            TypeCastingCodec.configure(registry);
+        }
+        registry.register(new TypeCodec[] { new SqlDateCodec(registry), new SqlTimeCodec(registry), new SqlTimestampCodec(registry),
+            new ByteArrayCodec(registry), new InputStreamCodec(registry), new InputStreamCodec(registry), 
+            new StringReaderCodec(registry), new BlobCodec(registry), new StringStreamCodec(registry), new ClobCodec(registry) });
+    }
+  
 
 }

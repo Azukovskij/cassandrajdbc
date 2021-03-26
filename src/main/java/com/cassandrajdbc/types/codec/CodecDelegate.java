@@ -15,8 +15,12 @@ abstract class CodecDelegate<I,O> extends TypeCodec<I> {
     private TypeCodec<O> delegate;
 
     protected CodecDelegate(CodecRegistry registry, DataType cqlType, Class<I> managedClass, Class<O> storedClass) {
-        super(cqlType, managedClass);
-        this.delegate = registry.codecFor(cqlType, storedClass);
+        this(registry.codecFor(cqlType, storedClass), managedClass);
+    }
+
+    protected CodecDelegate(TypeCodec<O> delegate, Class<I> managedClass) {
+        super(delegate.getCqlType(), managedClass);
+        this.delegate = delegate;
     }
     
     @Override

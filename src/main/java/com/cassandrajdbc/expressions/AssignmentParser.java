@@ -4,10 +4,15 @@ package com.cassandrajdbc.expressions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
+import com.datastax.driver.core.ColumnMetadata;
+import com.datastax.driver.core.DataType;
+import com.datastax.driver.core.TableMetadata;
 import com.datastax.driver.core.querybuilder.Assignment;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
@@ -25,15 +30,17 @@ public class AssignmentParser extends ExpressionVisitorAdapter {
     private final List<Assignment> assignments = new ArrayList<>();
     private final String columnName;
     
-    public static BiFunction<String, Expression, Stream<Assignment>> instance() {
+    
+    public static BiFunction<String, Expression, Stream<Assignment>> instance(TableMetadata table, ClusterConfiguration config) {
         return (columnName, expr) -> {
             AssignmentParser incrementVisitor = new AssignmentParser(columnName);
+            ColumnMetadata column = config.getColumnMetadata(table, columnName);
             ValueParser assignVisitor = new ValueParser();
             expr.accept(incrementVisitor);
             expr.accept(assignVisitor);
             return Stream.concat(
                     assignVisitor.getValues()
-                        .map(val -> QueryBuilder.set(columnName, val)), 
+                        .map(val -> QueryBuilder.set(column.getName(), normalize(column, val))), 
                     incrementVisitor.assignments.stream()
                 );
         };
@@ -74,6 +81,14 @@ public class AssignmentParser extends ExpressionVisitorAdapter {
             return columnName;
         }
         throw new UnsupportedOperationException("Column assignment not supported " + expr);
+    }
+
+    // FIXME move to ConverterRegistry
+    private static Object normalize(ColumnMetadata col, Object val) {
+        if(col.getType() == DataType.uuid() && val instanceof String) {
+            return UUID.fromString((String) val);
+        }
+        return val;
     }
 
 }

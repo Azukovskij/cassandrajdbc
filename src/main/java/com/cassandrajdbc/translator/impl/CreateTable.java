@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.cassandrajdbc.statement.StatementOptions;
 import com.cassandrajdbc.statement.StatementOptions.Collation;
+import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
 import com.cassandrajdbc.types.CqlType;
 import com.datastax.driver.core.DataType;
@@ -30,7 +30,7 @@ public class CreateTable implements CqlBuilder<net.sf.jsqlparser.statement.creat
     }
 
     @Override
-    public RegularStatement buildCql(net.sf.jsqlparser.statement.create.table.CreateTable stmt, StatementOptions config) {
+    public RegularStatement buildCql(net.sf.jsqlparser.statement.create.table.CreateTable stmt, ClusterConfiguration config) {
         Set<String> primaryKeys = resolvePrimaryKeyNames(stmt);
         Create result = stmt.getColumnDefinitions().stream()
             .collect(() -> SchemaBuilder.createTable(stmt.getTable().getSchemaName(), escape(stmt.getTable().getName(), config)), 
@@ -46,7 +46,7 @@ public class CreateTable implements CqlBuilder<net.sf.jsqlparser.statement.creat
             .collect(Collectors.toSet());
     }
 
-    private Create addColumn(Create cql, ColumnDefinition column, boolean primarykey, StatementOptions config) {
+    private Create addColumn(Create cql, ColumnDefinition column, boolean primarykey, ClusterConfiguration config) {
         String columnName = escape(column.getColumnName(), config);
         DataType dataType = CqlType.from(column.getColDataType());
         if(!primarykey) {
@@ -59,8 +59,8 @@ public class CreateTable implements CqlBuilder<net.sf.jsqlparser.statement.creat
         return column.getColumnSpecStrings() != null && column.getColumnSpecStrings().containsAll(NOT_NULL_SPEC);
     }
     
-    private String escape(String value, StatementOptions config) {
-        return config.getCollation() == Collation.CASE_SENSITIVE ? "\"" + value + "\"" : value;
+    private String escape(String value, ClusterConfiguration config) {
+        return config.getStatementOptions().getCollation() == Collation.CASE_SENSITIVE ? "\"" + value + "\"" : value;
     }
     
 }

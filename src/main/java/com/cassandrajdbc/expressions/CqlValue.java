@@ -11,6 +11,7 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import com.cassandrajdbc.util.MathUtil;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Objects;
 
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -177,7 +178,7 @@ public class CqlValue {
 
         @Override
         public void visit(JdbcParameter param) {
-            value = PARAM;
+            value = QueryBuilder.bindMarker();
         }
 
         @Override

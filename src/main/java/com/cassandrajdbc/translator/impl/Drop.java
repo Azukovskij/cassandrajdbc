@@ -3,6 +3,7 @@
 package com.cassandrajdbc.translator.impl;
 
 import com.cassandrajdbc.statement.StatementOptions;
+import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
 import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
@@ -17,7 +18,7 @@ public class Drop implements CqlBuilder<net.sf.jsqlparser.statement.drop.Drop> {
     }
 
     @Override
-    public RegularStatement buildCql(net.sf.jsqlparser.statement.drop.Drop stmt, StatementOptions config) {
+    public RegularStatement buildCql(net.sf.jsqlparser.statement.drop.Drop stmt, ClusterConfiguration config) {
         Table item = stmt.getName();
         switch (stmt.getType()) {
             case "TABLE":

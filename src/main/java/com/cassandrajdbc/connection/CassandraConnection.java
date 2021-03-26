@@ -27,15 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.cassandrajdbc.CassandraURL;
-import com.cassandrajdbc.expressions.CqlValue;
 import com.cassandrajdbc.statement.CPreparedStatement;
 import com.cassandrajdbc.translator.CqlToSqlParser;
 import com.cassandrajdbc.translator.SqlToClqTranslator;
-import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.Session;
-
-import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 
 public class CassandraConnection implements Connection {
     
@@ -62,16 +57,15 @@ public class CassandraConnection implements Connection {
     @Override
     public String nativeSQL(String sql) throws SQLException {
         checkClosed();
-        return toSql(sql);
+        return toCql(sql);
     }
 
-    public String toSql(String sql) {
+    public String toCql(String sql) {
         try {
-            var translated = SqlToClqTranslator.translateToCQL(CqlToSqlParser.parse(sql));
+            var translated = SqlToClqTranslator.translateToCQL(CqlToSqlParser.parse(sql), session.getCluster().getMetadata());
             if(translated != null) {
                 logger.debug("Translated query {}", translated);
-                return translated.toString()
-                    .replace("'" + CqlValue.PARAM + "'", "?");
+                return translated.toString();
             }
         } catch (Exception e) {
             logger.trace("SQL parse failed", e);
@@ -79,7 +73,7 @@ public class CassandraConnection implements Connection {
         logger.debug("CQ statement passthrough {}", sql);
         return sql;
     }
-    
+
     @Override
     public void close() throws SQLException {
         session.close();
@@ -351,14 +345,6 @@ public class CassandraConnection implements Connection {
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         checkClosed();
         return iface.isAssignableFrom(getClass());
-    }
-
-    private String normalizeSql(String sql) {
-        if(sql.startsWith("ALTER TABLE") && sql.contains("ADD ") &&
-            !sql.contains("ADD COLUMN")) {
-            return sql.replace("ADD ", "ADD COLUMN ");
-        }
-        return sql;
     }
     
     private void checkClosed() throws SQLException {

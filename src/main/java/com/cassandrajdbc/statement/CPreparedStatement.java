@@ -44,17 +44,6 @@ import java.util.stream.IntStream;
 import com.cassandrajdbc.connection.CassandraConnection;
 import com.cassandrajdbc.result.CResultSet;
 import com.cassandrajdbc.result.CResultSetMetaData;
-import com.cassandrajdbc.types.codec.BlobCodec;
-import com.cassandrajdbc.types.codec.ByteArrayCodec;
-import com.cassandrajdbc.types.codec.ClobCodec;
-import com.cassandrajdbc.types.codec.InputStreamCodec;
-import com.cassandrajdbc.types.codec.SqlDateCodec;
-import com.cassandrajdbc.types.codec.SqlTimeCodec;
-import com.cassandrajdbc.types.codec.SqlTimestampCodec;
-import com.cassandrajdbc.types.codec.StringReaderCodec;
-import com.cassandrajdbc.types.codec.StringStreamCodec;
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.CodecRegistry;
 import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.exceptions.DriverException;
@@ -95,11 +84,6 @@ public class CPreparedStatement implements PreparedStatement {
         this.connection = connection;
         this.preparedStatement = sql;
         this.fetchSize = fetchSize;
-        
-        CodecRegistry registry = connection.getSession().getCluster().getConfiguration().getCodecRegistry();
-        registry.register(new SqlDateCodec(registry), new SqlTimeCodec(registry), new SqlTimestampCodec(registry),
-            new ByteArrayCodec(registry), new InputStreamCodec(registry), new InputStreamCodec(registry), 
-            new StringReaderCodec(registry), new BlobCodec(registry), new StringStreamCodec(registry), new ClobCodec(registry));
     }
 
     @Override
@@ -126,13 +110,15 @@ public class CPreparedStatement implements PreparedStatement {
      * query operations
      */
     public com.datastax.driver.core.ResultSet executeInternal(String sql) {
-        return sql == null ? null : connection.getSession().execute(prepareStatement(sql, preparedParams));
+        return sql == null ? null : connection.getSession().execute(prepareStatement(sql, preparedParams));   
     }
 
-    public Statement prepareStatement(String sql, List<Object> params) {
-        String cql = connection.toSql(sql);
-        Statement stmt = params.isEmpty() ?  new SimpleStatement(cql) : new BoundStatement(connection.getSession().prepare(cql))
-            .bind(params.toArray(Object[]::new));
+    private Statement prepareStatement(String sql, List<Object> params) {
+        String cql = connection.toCql(sql);
+        Statement stmt = params.isEmpty() 
+                ? new SimpleStatement(cql)
+                : connection.getSession().prepare(cql.toString())
+                    .bind(params.toArray(Object[]::new));
         stmt.setReadTimeoutMillis(queryTimeoutSec);
         stmt.setFetchSize(fetchSize);
         return stmt;

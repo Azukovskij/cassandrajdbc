@@ -986,7 +986,8 @@ class CDatabaseMetaData implements DatabaseMetaData {
                         tb.getKeyspace().getName(), // "TABLE_SCHEMA"
                         tb.getName(), // "TABLE_NAME"
                         col.getName(), // "COLUMN_NAME"
-                        CqlType.resolve(col.getType()).getSqlType().getVendorTypeNumber(), 
+                        CqlType.resolve(col.getType()).getSqlType().getVendorTypeNumber(),  // DATA_TYPE
+                        CqlType.resolve(col.getType()).getSqlType().getName(),  // TYPE_NAME
                         800, // "COLUMN_SIZE"
                         0, // "BUFFER_LENGTH"
                         0, // "DECIMAL_DIGITS"
