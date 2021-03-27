@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.cassandrajdbc.statement.StatementOptions.Collation;
-import com.cassandrajdbc.translator.CqlToSqlParser;
+import com.cassandrajdbc.translator.SqlParser;
 import com.cassandrajdbc.types.ColumnTypes;
 import com.cassandrajdbc.types.ColumnTypes.ColumnType;
 import com.datastax.driver.core.ColumnMetadata;
@@ -27,7 +27,6 @@ import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.StatementVisitorAdapter;
 import net.sf.jsqlparser.statement.Statements;
 import net.sf.jsqlparser.statement.create.table.ColDataType;
@@ -250,9 +249,7 @@ public class CResultSetMetaData implements ResultSetMetaData {
             }
             try {
                 Parser parser = new Parser(metadata);
-                Statement stmt;
-                stmt = CqlToSqlParser.parse(sql);
-                stmt.accept(parser);
+                SqlParser.parse(sql).getStatement().accept(parser);
                 return new CResultSetMetaData(parser.columns.toArray(Column[]::new), metadata);
             } catch (JSQLParserException e) {
                 return new CResultSetMetaData(parseColumnsAsRegExp(sql, metadata), metadata);

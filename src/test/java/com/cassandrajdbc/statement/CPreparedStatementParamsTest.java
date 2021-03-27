@@ -4,6 +4,7 @@ package com.cassandrajdbc.statement;
 
 import static com.cassandrajdbc.test.util.BinaryMatcher.readerEqualTo;
 import static com.cassandrajdbc.test.util.BinaryMatcher.streamEqualTo;
+import static com.cassandrajdbc.test.util.CassandraTestConnection.getConnection;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -30,34 +31,34 @@ import java.util.concurrent.TimeUnit;
 import javax.sql.rowset.serial.SerialBlob;
 import javax.sql.rowset.serial.SerialClob;
 
+import org.cassandraunit.spring.CassandraDataSet;
+import org.cassandraunit.spring.CassandraUnitTestExecutionListener;
+import org.cassandraunit.spring.EmbeddedCassandra;
 import org.hamcrest.Matcher;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.junit4.rules.SpringClassRule;
+import org.springframework.test.context.junit4.rules.SpringMethodRule;
 
-import com.cassandrajdbc.connection.CassandraConnection;
 import com.cassandrajdbc.test.util.MethodPointer;
 import com.cassandrajdbc.types.SerialNClob;
-import com.cassandrajdbc.types.codec.BlobCodec;
-import com.cassandrajdbc.types.codec.ByteArrayCodec;
-import com.cassandrajdbc.types.codec.ClobCodec;
-import com.cassandrajdbc.types.codec.InputStreamCodec;
-import com.cassandrajdbc.types.codec.SqlDateCodec;
-import com.cassandrajdbc.types.codec.SqlTimeCodec;
-import com.cassandrajdbc.types.codec.SqlTimestampCodec;
-import com.cassandrajdbc.types.codec.StringReaderCodec;
-import com.cassandrajdbc.types.codec.StringStreamCodec;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.CodecRegistry;
-import com.datastax.driver.core.TypeCodec;
 
 @RunWith(Parameterized.class)
+@TestExecutionListeners({ CassandraUnitTestExecutionListener.class })
+@CassandraDataSet(keyspace = "CPreparedStatementParamsTest", value = { "CPreparedStatementTests/Tables.cql" })
+@EmbeddedCassandra
 public class CPreparedStatementParamsTest {
     
-    private static final String KEYSPACE_NAME = "CPreparedStatementParamsTest";
     
-    private static CassandraConnection connection;
+    @ClassRule
+    public static final SpringClassRule scr = new SpringClassRule();
+
+    @Rule
+    public final SpringMethodRule smr = new SpringMethodRule();
     
     private final MethodPointer setter;
     private final MethodPointer getter;
@@ -66,23 +67,6 @@ public class CPreparedStatementParamsTest {
     private final String dataType;
     private final String tableName;
     private final String rowId;
-
-    private final CPreparedStatement testObject;
-    
-    @BeforeClass
-    public static void connect() {
-        connection = new CassandraConnection(Cluster.builder()
-            .addContactPoint("localhost")
-            .build().connect(), null);
-        
-        CodecRegistry registry = connection.getSession().getCluster().getConfiguration().getCodecRegistry();
-        registry.register(new TypeCodec[] { new SqlDateCodec(registry), new SqlTimeCodec(registry), new SqlTimestampCodec(registry),
-            new ByteArrayCodec(registry), new InputStreamCodec(registry), new InputStreamCodec(registry), 
-            new StringReaderCodec(registry), new BlobCodec(registry), new StringStreamCodec(registry), new ClobCodec(registry) });
-        
-        connection.getSession().execute("CREATE KEYSPACE IF NOT EXISTS " + KEYSPACE_NAME
-            + " WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
-    }
     
     @Parameterized.Parameters(name = "{0} = {3}")
     public static List<Object[]> data() throws Exception {
@@ -132,13 +116,14 @@ public class CPreparedStatementParamsTest {
         this.getter = getter;
         this.expectedValue = expectedValue;
         this.tableName = "CPreparedStatementParamsTest.ParamsTest" + dataType + getter.getMethodName().substring(3).toUpperCase();
-        this.testObject = new CPreparedStatement(connection, null, 1);
         this.rowId = UUID.randomUUID().toString();
     }
     
     @Test
     public void shouldPrepareParamByIndex() throws SQLException {
-        connection.getSession().execute("CREATE TABLE IF NOT EXISTS " + tableName + " (ID VARCHAR, DATA " + dataType + ", PRIMARY KEY (ID))");
+        CPreparedStatement testObject = new CPreparedStatement(getConnection(), null, 1);
+
+        getConnection().getSession().execute("CREATE TABLE IF NOT EXISTS " + tableName + " (ID VARCHAR, DATA " + dataType + ", PRIMARY KEY (ID))");
         
         setter.invoke(testObject);
         
@@ -151,7 +136,9 @@ public class CPreparedStatementParamsTest {
     
     @Test
     public void shouldPrepareParamByname() throws SQLException {
-        connection.getSession().execute("CREATE TABLE IF NOT EXISTS " + tableName + " (ID VARCHAR, DATA " + dataType + ", PRIMARY KEY (ID))");
+        CPreparedStatement testObject = new CPreparedStatement(getConnection(), null, 1);
+
+        getConnection().getSession().execute("CREATE TABLE IF NOT EXISTS " + tableName + " (ID VARCHAR, DATA " + dataType + ", PRIMARY KEY (ID))");
         
         setter.invoke(testObject);
         
@@ -165,6 +152,8 @@ public class CPreparedStatementParamsTest {
     
     @Test
     public void shouldDecsribeParamMetadata() throws SQLException {
+        CPreparedStatement testObject = new CPreparedStatement(getConnection(), null, 1);
+
         setter.invoke(testObject);
         
         ParameterMetaData meta = testObject.getParameterMetaData();

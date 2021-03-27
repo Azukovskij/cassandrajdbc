@@ -11,40 +11,29 @@ import java.sql.JDBCType;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.cassandraunit.spring.CassandraDataSet;
+import org.cassandraunit.spring.CassandraUnitTestExecutionListener;
+import org.cassandraunit.spring.EmbeddedCassandra;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import com.cassandrajdbc.connection.CassandraConnection;
-import com.datastax.driver.core.Cluster;
+import com.cassandrajdbc.test.util.CassandraTestConnection;
 
+
+@RunWith(SpringJUnit4ClassRunner.class)
+@TestExecutionListeners({ CassandraUnitTestExecutionListener.class })
+@CassandraDataSet(keyspace = "CPreparedStatementTests", value = { "CPreparedStatementTests/Tables.cql" })
+@EmbeddedCassandra
 public class CPreparedStatementMetadataTest {
     
     private static final String KEYSPACE_NAME = "CPreparedStatementTests";
     private static final String TABLE_NAME = KEYSPACE_NAME + ".MetadataTest";
     
-    private static CassandraConnection connection;
-    
-    @BeforeClass
-    public static void connect() {
-        connection = new CassandraConnection(Cluster.builder()
-            .addContactPoint("localhost")
-            .build().connect(), null);
-        connection.getSession().execute("CREATE KEYSPACE IF NOT EXISTS " + KEYSPACE_NAME
-            + " WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
-        connection.getSession().execute("DROP TABLE IF EXISTS " + TABLE_NAME);
-        connection.getSession().execute("CREATE TABLE " + TABLE_NAME 
-            + "(ID VARCHAR, DATA INT, PRIMARY KEY (ID))");
-    }
-
-    @Before
-    public void init() {
-        connection.getSession().execute("TRUNCATE " + TABLE_NAME);
-    }
-    
     @Test
     public void shoulProvideWildcardMetadata() throws SQLException {
-        CPreparedStatement stmt = new CPreparedStatement(connection);
+        CPreparedStatement stmt = new CPreparedStatement(CassandraTestConnection.getConnection());
         ResultSetMetaData meta = stmt.executeQuery("SELECT * FROM " + TABLE_NAME).getMetaData();
         
         assertThat(meta.getColumnCount(), equalTo(2));
@@ -72,7 +61,7 @@ public class CPreparedStatementMetadataTest {
     
     @Test
     public void shouldProideColumnLabels() throws SQLException {
-        CPreparedStatement stmt = new CPreparedStatement(connection);
+        CPreparedStatement stmt = new CPreparedStatement(CassandraTestConnection.getConnection());
         ResultSetMetaData meta = stmt.executeQuery("SELECT DATA as d, ID as i FROM " + TABLE_NAME).getMetaData();
        
         assertThat(meta.getColumnCount(), equalTo(2));
@@ -88,7 +77,7 @@ public class CPreparedStatementMetadataTest {
     
     @Test
     public void shouldPrebuildMetadata() throws SQLException {
-        CPreparedStatement stmt = new CPreparedStatement(connection, "SELECT * FROM " + TABLE_NAME + " WHERE ID=?");
+        CPreparedStatement stmt = new CPreparedStatement(CassandraTestConnection.getConnection(), "SELECT * FROM " + TABLE_NAME + " WHERE ID=?");
         ResultSetMetaData meta = stmt.getMetaData();
         
         assertThat(meta.getColumnCount(), equalTo(2));

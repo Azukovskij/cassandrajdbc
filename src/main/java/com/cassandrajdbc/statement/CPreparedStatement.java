@@ -38,17 +38,16 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.TimeZone;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.cassandrajdbc.connection.CassandraConnection;
 import com.cassandrajdbc.result.CResultSet;
 import com.cassandrajdbc.result.CResultSetMetaData;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.Statement;
+import com.cassandrajdbc.translator.SqlToClqTranslator;
+import com.datastax.driver.core.Metadata;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
 import com.google.common.io.CharStreams;
 
 
@@ -109,20 +108,14 @@ public class CPreparedStatement implements PreparedStatement {
     /*
      * query operations
      */
-    public com.datastax.driver.core.ResultSet executeInternal(String sql) {
-        return sql == null ? null : connection.getSession().execute(prepareStatement(sql, preparedParams));   
+    public Iterable<Row> executeInternal(String sql, List<Object> params) throws SQLException {
+        if(sql == null) {
+            return null;
+        }
+        Metadata metadata = connection.getSession().getCluster().getMetadata();
+        return SqlToClqTranslator.translateToCQL(sql, metadata).execute(this, params);   
     }
-
-    private Statement prepareStatement(String sql, List<Object> params) {
-        String cql = connection.toCql(sql);
-        Statement stmt = params.isEmpty() 
-                ? new SimpleStatement(cql)
-                : connection.getSession().prepare(cql.toString())
-                    .bind(params.toArray(Object[]::new));
-        stmt.setReadTimeoutMillis(queryTimeoutSec);
-        stmt.setFetchSize(fetchSize);
-        return stmt;
-    }
+    
 
     @Override
     public boolean execute() throws SQLException {
@@ -166,7 +159,7 @@ public class CPreparedStatement implements PreparedStatement {
 //              return explainPlan(matcherExplainPlan.group(1));
 //          } 
             resultSet = sql.isBlank() ? new CResultSet(this) :
-                new CResultSet(this, getMetadata(sql), executeInternal(sql));
+                new CResultSet(this, getMetadata(sql), executeInternal(sql, preparedParams).iterator());
         } catch (DriverException | UnsupportedOperationException e) {
             throw new SQLException("Cassandra error", e);
         } finally {
@@ -211,10 +204,8 @@ public class CPreparedStatement implements PreparedStatement {
     @Override
     public int[] executeBatch() throws SQLException {
         try {
-            for(List<Statement> batch : Lists.partition(IntStream.range(0, batchStatements.size())
-                    .mapToObj(i -> prepareStatement(batchStatements.get(i), batchParams.get(i)))
-                    .collect(Collectors.toList()), 100)) {
-                batch.forEach(connection.getSession()::execute);
+            for(int i = 0; i < batchStatements.size(); i++) {
+                executeInternal(batchStatements.get(i), batchParams.get(i));
             }
             return batchStatements.stream().mapToInt(sql -> SUCCESS_NO_INFO).toArray();
         } catch (DriverException e) {

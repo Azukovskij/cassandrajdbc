@@ -2,9 +2,11 @@
  CONFIDENTIAL AND TRADE SECRET INFORMATION. No portion of this work may be copied, distributed, modified, or incorporated into any other media without EIS Group prior written consent.*/
 package com.cassandrajdbc.translator.impl;
 
-import com.cassandrajdbc.statement.StatementOptions;
+import com.cassandrajdbc.translator.SqlParser.SqlStatement;
 import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
+import com.cassandrajdbc.translator.stmt.CStatement;
+import com.cassandrajdbc.translator.stmt.SimpleCStatement;
 import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 
@@ -16,9 +18,13 @@ public class Drop implements CqlBuilder<net.sf.jsqlparser.statement.drop.Drop> {
     public Class<? extends net.sf.jsqlparser.statement.drop.Drop> getInputType() {
         return net.sf.jsqlparser.statement.drop.Drop.class;
     }
-
+    
     @Override
-    public RegularStatement buildCql(net.sf.jsqlparser.statement.drop.Drop stmt, ClusterConfiguration config) {
+    public CStatement translate(SqlStatement<net.sf.jsqlparser.statement.drop.Drop> stmt, ClusterConfiguration config) {
+        return new SimpleCStatement(stmt, buildCql(stmt.getStatement(), config));
+    }
+
+    private RegularStatement buildCql(net.sf.jsqlparser.statement.drop.Drop stmt, ClusterConfiguration config) {
         Table item = stmt.getName();
         switch (stmt.getType()) {
             case "TABLE":

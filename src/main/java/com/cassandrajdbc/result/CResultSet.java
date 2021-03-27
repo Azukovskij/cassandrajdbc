@@ -60,13 +60,13 @@ public class CResultSet implements ResultSet {
         this.iterator = iterator(rows);
     }
 
-    public CResultSet(Statement statement, CResultSetMetaData metadata, com.datastax.driver.core.ResultSet results) throws SQLException {
+    public CResultSet(Statement statement, CResultSetMetaData metadata, Iterator<com.datastax.driver.core.Row> results) throws SQLException {
         this.statement = statement;
         this.metadata = metadata;
-        this.rows = () -> new ResultSetIterator(results.iterator());
+        this.rows = () -> new ResultSetIterator(results);
         this.iterator = iterator(this.rows);
     }
-
+    
     public CResultSet(Statement statement, CResultSetMetaData metadata, Iterable<Row> rows) {
         this.statement = statement;
         this.metadata = metadata;

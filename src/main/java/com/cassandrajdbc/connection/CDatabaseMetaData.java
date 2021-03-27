@@ -1245,7 +1245,7 @@ class CDatabaseMetaData implements DatabaseMetaData {
     }
 
     private CResultSet toResultSet(CResultSetMetaData metadata) {
-        return new CResultSet(new CPreparedStatement(connection), metadata, Collections.emptyList());
+        return new CResultSet(new CPreparedStatement(connection), metadata, (List)Collections.emptyList());
     }
 
     private CResultSet toResultSet(CResultSetMetaData metadata, Object[][] rows) {

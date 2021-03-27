@@ -2,6 +2,7 @@
  CONFIDENTIAL AND TRADE SECRET INFORMATION. No portion of this work may be copied, distributed, modified, or incorporated into any other media without EIS Group prior written consent.*/
 package com.cassandrajdbc.result;
 
+import static com.cassandrajdbc.test.util.CassandraTestConnection.getConnection;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -18,45 +19,33 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.cassandraunit.spring.CassandraDataSet;
+import org.cassandraunit.spring.CassandraUnitTestExecutionListener;
+import org.cassandraunit.spring.EmbeddedCassandra;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import com.cassandrajdbc.connection.CassandraConnection;
 import com.cassandrajdbc.statement.CPreparedStatement;
 import com.cassandrajdbc.test.util.ResultSetMatcher.CheckedFunction;
-import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.DataType;
 
+
+@RunWith(SpringJUnit4ClassRunner.class)
+@TestExecutionListeners({ CassandraUnitTestExecutionListener.class })
+@CassandraDataSet(keyspace = "CPreparedStatementTests", value = { "CPreparedStatementTests/Tables.cql" })
+@EmbeddedCassandra
 public class CResultSetIterationTest {
     
     private static final String KEYSPACE_NAME = "CPreparedStatementTests";
     private static final String TABLE_NAME = KEYSPACE_NAME + ".ResultSetTest";
     
-    private static CassandraConnection connection;
-    
-    @BeforeClass
-    public static void connect() {
-        connection = new CassandraConnection(Cluster.builder()
-            .addContactPoint("localhost")
-            .build().connect(), null);
-        connection.getSession().execute("DROP KEYSPACE IF EXISTS " + KEYSPACE_NAME);
-        connection.getSession().execute("CREATE KEYSPACE " + KEYSPACE_NAME
-            + " WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
-        connection.getSession().execute("CREATE TABLE IF NOT EXISTS "
-            + TABLE_NAME + "(ID VARCHAR, DATA VARCHAR, PRIMARY KEY (ID))");
-    }
-
-    @Before
-    public void init() {
-        connection.getSession().execute("TRUNCATE " + TABLE_NAME);
-    }
-
     @Test
     public void shouldIterateForward() throws SQLException {
         insertData(11);
         
-        CPreparedStatement stmt = new CPreparedStatement(connection);
+        CPreparedStatement stmt = new CPreparedStatement(getConnection());
         ResultSet results = stmt.executeQuery("SELECT * FROM " + TABLE_NAME);
         
         assertTrue(results.isBeforeFirst());
@@ -79,7 +68,7 @@ public class CResultSetIterationTest {
 
     @Test
     public void shouldIterateBackwards() throws SQLException {
-        CPreparedStatement stmt = new CPreparedStatement(connection);
+        CPreparedStatement stmt = new CPreparedStatement(getConnection());
         CResultSet results = new CResultSet(stmt, new CResultSetMetaData(KEYSPACE_NAME, "TESTITERATION", 
             new String[] {"ID", "DATA" }, new DataType[] { DataType.varchar(), DataType.varchar() }), 
                 Arrays.asList(new CResultSet.Row(0, new Object[] {"1", "D1"}), 
@@ -128,7 +117,7 @@ public class CResultSetIterationTest {
     public void shouldCountRows() throws SQLException {
         insertData(6);
         
-        CPreparedStatement stmt = new CPreparedStatement(connection);
+        CPreparedStatement stmt = new CPreparedStatement(getConnection());
         ResultSet results = stmt.executeQuery("SELECT * FROM " + TABLE_NAME);
         
         List<Integer> indexes = readFully(results, rs -> rs.getRow());
@@ -139,7 +128,7 @@ public class CResultSetIterationTest {
     public void shouldIterateStatement() throws SQLException {
         insertData(5);
         
-        CPreparedStatement stmt = new CPreparedStatement(connection);
+        CPreparedStatement stmt = new CPreparedStatement(getConnection());
         assertTrue(stmt.execute("SELECT * FROM " + TABLE_NAME));
         
         List<String> allValues = readFully(stmt.getResultSet(), rs -> rs.getString("ID"));
@@ -156,7 +145,7 @@ public class CResultSetIterationTest {
     
     private void insertData(int count) {
         IntStream.range(0, count)
-            .forEach(i -> connection.getSession()
+            .forEach(i -> getConnection().getSession()
                 .execute("INSERT INTO " + TABLE_NAME + "(ID,DATA) VALUES ('" + i + "', 'D" + i + "')"));
         
     }

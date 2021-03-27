@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import com.cassandrajdbc.CassandraURL;
 import com.cassandrajdbc.statement.CPreparedStatement;
-import com.cassandrajdbc.translator.CqlToSqlParser;
 import com.cassandrajdbc.translator.SqlToClqTranslator;
 import com.datastax.driver.core.Session;
 
@@ -57,21 +56,7 @@ public class CassandraConnection implements Connection {
     @Override
     public String nativeSQL(String sql) throws SQLException {
         checkClosed();
-        return toCql(sql);
-    }
-
-    public String toCql(String sql) {
-        try {
-            var translated = SqlToClqTranslator.translateToCQL(CqlToSqlParser.parse(sql), session.getCluster().getMetadata());
-            if(translated != null) {
-                logger.debug("Translated query {}", translated);
-                return translated.toString();
-            }
-        } catch (Exception e) {
-            logger.trace("SQL parse failed", e);
-        }
-        logger.debug("CQ statement passthrough {}", sql);
-        return sql;
+        return SqlToClqTranslator.translateToCQL(sql, session.getCluster().getMetadata()).toNativeSQL();
     }
 
     @Override

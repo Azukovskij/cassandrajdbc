@@ -7,8 +7,11 @@ import java.util.stream.Stream;
 
 import com.cassandrajdbc.expressions.AssignmentParser;
 import com.cassandrajdbc.expressions.ClauseParser;
+import com.cassandrajdbc.translator.SqlParser.SqlStatement;
 import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
+import com.cassandrajdbc.translator.stmt.CStatement;
+import com.cassandrajdbc.translator.stmt.SimpleCStatement;
 import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.TableMetadata;
 import com.datastax.driver.core.querybuilder.Assignment;
@@ -23,9 +26,13 @@ public class Update implements CqlBuilder<net.sf.jsqlparser.statement.update.Upd
     public Class<net.sf.jsqlparser.statement.update.Update> getInputType() {
         return net.sf.jsqlparser.statement.update.Update.class;
     }
-
+    
     @Override
-    public RegularStatement buildCql(net.sf.jsqlparser.statement.update.Update stmt, ClusterConfiguration config) {
+    public CStatement translate(SqlStatement<net.sf.jsqlparser.statement.update.Update> stmt, ClusterConfiguration config) {
+        return new SimpleCStatement(stmt, buildCql(stmt.getStatement(), config));
+    }
+
+    private RegularStatement buildCql(net.sf.jsqlparser.statement.update.Update stmt, ClusterConfiguration config) {
         if(stmt.getJoins() != null) {
             throw new UnsupportedOperationException("joins not supported " + stmt);
         }

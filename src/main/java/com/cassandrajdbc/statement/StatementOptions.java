@@ -19,5 +19,17 @@ public class StatementOptions {
     public Properties getTableProps() {
         return null;
     }
+    
+    public int getFetchSize() {
+        return fetchSize;
+    }
+    
+    public int getTimeoutSec() {
+        return timeoutSec;
+    }
+    
+    public int getLimit() {
+        return limit;
+    }
 
 }

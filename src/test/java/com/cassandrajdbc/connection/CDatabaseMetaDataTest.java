@@ -2,34 +2,31 @@
  CONFIDENTIAL AND TRADE SECRET INFORMATION. No portion of this work may be copied, distributed, modified, or incorporated into any other media without EIS Group prior written consent.*/
 package com.cassandrajdbc.connection;
 
+import static com.cassandrajdbc.test.util.CassandraTestConnection.getConnection;
 import static com.cassandrajdbc.test.util.ResultSetMatcher.hasResultCount;
 import static com.cassandrajdbc.test.util.ResultSetMatcher.hasResultItems;
 import static com.cassandrajdbc.test.util.ResultSetMatcher.resultsEqualTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-import java.math.BigDecimal;
-import java.sql.Clob;
-import java.sql.Date;
-import java.sql.JDBCType;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
 
-import org.junit.BeforeClass;
+import org.cassandraunit.spring.CassandraDataSet;
+import org.cassandraunit.spring.CassandraUnitTestExecutionListener;
+import org.cassandraunit.spring.EmbeddedCassandra;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.cassandrajdbc.CassandraURL;
-import com.cassandrajdbc.test.util.ResultSetMatcher.CheckedFunction;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 
+@RunWith(SpringJUnit4ClassRunner.class)
+@TestExecutionListeners({ CassandraUnitTestExecutionListener.class })
+@CassandraDataSet(keyspace = "CDatabaseMetaDataTest", value = { "CDatabaseMetaDataTest/Tables.cql" })
+@EmbeddedCassandra
 public class CDatabaseMetaDataTest {
     
     private static final String KEYSPACE_NAME = "CDatabaseMetaDataTest";
@@ -37,18 +34,6 @@ public class CDatabaseMetaDataTest {
     private static final String FUNC_NAME = KEYSPACE_NAME + ".MetadataFunc";
     private static final String TYPE_NAME = KEYSPACE_NAME + ".MetadataType";
     
-    private static CassandraConnection connection;
-    
-    @BeforeClass
-    public static void connect() {
-        connection = new CassandraConnection(Cluster.builder()
-            .addContactPoint("localhost")
-            .build().connect(), null);
-        connection.getSession().execute("CREATE KEYSPACE IF NOT EXISTS " + KEYSPACE_NAME
-            + " WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
-        connection.getSession().execute("CREATE TABLE IF NOT EXISTS "
-            + TABLE_NAME + "(ID VARCHAR, DATA VARCHAR, PRIMARY KEY (ID))");
-    }
 
     @Test
     public void shouldDescribeSchemas() throws SQLException {
@@ -92,7 +77,7 @@ public class CDatabaseMetaDataTest {
     @Test
     public void shouldDescribeFunctions() throws SQLException {
         try {
-            connection.getSession().execute("CREATE FUNCTION IF NOT EXISTS " + FUNC_NAME
+            getConnection().getSession().execute("CREATE FUNCTION IF NOT EXISTS " + FUNC_NAME
                 + "(data TEXT, num INT) RETURNS NULL ON NULL INPUT RETURNS TEXT "
                 + "LANGUAGE java AS $$ return data.substring(0,num); $$");
         } catch (InvalidQueryException e) {
@@ -108,7 +93,7 @@ public class CDatabaseMetaDataTest {
 
     @Test
     public void shouldDescribeTypes() throws SQLException {
-        connection.getSession().execute("CREATE TYPE IF NOT EXISTS " + TYPE_NAME 
+        getConnection().getSession().execute("CREATE TYPE IF NOT EXISTS " + TYPE_NAME 
             + " (time TIMESTAMP, data TEXT)");
         
         CDatabaseMetaData meta = getMetadata();
@@ -125,7 +110,7 @@ public class CDatabaseMetaDataTest {
 
     @Test
     public void shouldDEscribeClientInfoProps() throws SQLException {
-        connection.getSession().execute("CREATE TYPE IF NOT EXISTS " + TYPE_NAME 
+        getConnection().getSession().execute("CREATE TYPE IF NOT EXISTS " + TYPE_NAME 
             + " (time TIMESTAMP, data TEXT)");
         
         CDatabaseMetaData meta = getMetadata();
@@ -134,7 +119,7 @@ public class CDatabaseMetaDataTest {
     }
 
     public CDatabaseMetaData getMetadata() {
-        return new CDatabaseMetaData(CassandraURL.create("jdbc:cassandra://localhost:9042").get(), connection);
+        return new CDatabaseMetaData(CassandraURL.create("jdbc:cassandra://localhost:9042").get(), getConnection());
     }
 
 }

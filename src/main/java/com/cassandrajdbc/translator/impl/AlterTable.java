@@ -5,10 +5,12 @@ package com.cassandrajdbc.translator.impl;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import com.cassandrajdbc.statement.StatementOptions;
 import com.cassandrajdbc.statement.StatementOptions.Collation;
+import com.cassandrajdbc.translator.SqlParser.SqlStatement;
 import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
+import com.cassandrajdbc.translator.stmt.CStatement;
+import com.cassandrajdbc.translator.stmt.SimpleCStatement;
 import com.cassandrajdbc.types.ColumnTypes;
 import com.cassandrajdbc.types.ColumnTypes.ColumnType;
 import com.datastax.driver.core.RegularStatement;
@@ -27,9 +29,13 @@ public class AlterTable implements CqlBuilder<net.sf.jsqlparser.statement.alter.
     public Class<net.sf.jsqlparser.statement.alter.Alter> getInputType() {
         return net.sf.jsqlparser.statement.alter.Alter.class;
     }
-
+    
     @Override
-    public RegularStatement buildCql(net.sf.jsqlparser.statement.alter.Alter stmt, ClusterConfiguration config) {
+    public CStatement translate(SqlStatement<net.sf.jsqlparser.statement.alter.Alter> stmt, ClusterConfiguration config) {
+        return new SimpleCStatement(stmt, buildCql(stmt.getStatement(), config));
+    }
+
+    private RegularStatement buildCql(net.sf.jsqlparser.statement.alter.Alter stmt, ClusterConfiguration config) {
         Alter alter = SchemaBuilder.alterTable(stmt.getTable().getSchemaName(), escape(stmt.getTable().getName(), config));
         return stmt.getAlterExpressions().stream()
             .flatMap(expression -> stream(expression)

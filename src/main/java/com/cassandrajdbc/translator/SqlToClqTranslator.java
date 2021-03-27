@@ -7,39 +7,49 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.cassandrajdbc.statement.StatementOptions;
+import com.cassandrajdbc.translator.SqlParser.SqlStatement;
+import com.cassandrajdbc.translator.stmt.CStatement;
+import com.cassandrajdbc.translator.stmt.NativeCStatement;
+import com.cassandrajdbc.translator.stmt.SimpleCStatement;
 import com.cassandrajdbc.util.SPI;
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.TableMetadata;
 
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.Statement;
 
 public class SqlToClqTranslator {
     
-    private final static Map<Class<?>, CqlBuilder<?>> builders = SPI.loadAll(CqlBuilder.class)
+    private static final Logger logger = LoggerFactory.getLogger(SimpleCStatement.class);
+    private static final Map<Class<?>, CqlBuilder<?>> builders = SPI.loadAll(CqlBuilder.class)
                     .collect(Collectors.toUnmodifiableMap(CqlBuilder::getInputType, Function.identity(), (a,b) -> a));
     
-
-    public static RegularStatement translateToCQL(String sql, Metadata clusterMetadata) throws JSQLParserException {
-        return translateToCQL(CqlToSqlParser.parse(sql), clusterMetadata);
+    public static CStatement translateToCQL(String sql, Metadata clusterMetadata) {
+        try {
+            return translateToCQL(SqlParser.parse(sql), clusterMetadata)
+                .orElseGet(() -> new NativeCStatement(sql));
+        } catch (Exception e) {
+            logger.trace("SQL parse failed, using native statement", e);
+            return new NativeCStatement(sql);
+        }
     }
-    
-    public static RegularStatement translateToCQL(Statement statement, Metadata clusterMetadata) {
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static Optional<CStatement> translateToCQL(SqlStatement<?> statement, Metadata clusterMetadata) {
         ClusterConfiguration clusterConfig = new ClusterConfiguration(clusterMetadata, new StatementOptions());
-        return Optional.ofNullable(builders.get(statement.getClass()))
-            .map(builder -> ((CqlBuilder<Statement>)builder).buildCql(statement, clusterConfig))
-            .orElse(null);
+        return Optional.ofNullable(builders.get(statement.getStatement().getClass()))
+            .map(builder -> ((CqlBuilder)builder).translate((SqlStatement)statement, clusterConfig));
     }
     
     public interface CqlBuilder<T extends Statement> {
         
         Class<? extends T> getInputType();
         
-        RegularStatement buildCql(T stmt, ClusterConfiguration config);
+        CStatement translate(SqlStatement<T> stmt, ClusterConfiguration config);
         
     }
     
