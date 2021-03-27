@@ -11,7 +11,8 @@ import java.util.stream.Collectors;
 import com.cassandrajdbc.statement.StatementOptions.Collation;
 import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
-import com.cassandrajdbc.types.CqlType;
+import com.cassandrajdbc.types.ColumnTypes;
+import com.cassandrajdbc.types.ColumnTypes.ColumnType;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.schemabuilder.Create;
@@ -48,7 +49,7 @@ public class CreateTable implements CqlBuilder<net.sf.jsqlparser.statement.creat
 
     private Create addColumn(Create cql, ColumnDefinition column, boolean primarykey, ClusterConfiguration config) {
         String columnName = escape(column.getColumnName(), config);
-        DataType dataType = CqlType.from(column.getColDataType());
+        DataType dataType = ColumnTypes.forName(column.getColDataType().getDataType(), ColumnType::getCqlType);
         if(!primarykey) {
             return cql.addColumn(columnName, dataType);
         }

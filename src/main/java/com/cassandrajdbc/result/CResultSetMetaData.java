@@ -16,10 +16,10 @@ import java.util.stream.IntStream;
 
 import com.cassandrajdbc.statement.StatementOptions.Collation;
 import com.cassandrajdbc.translator.CqlToSqlParser;
-import com.cassandrajdbc.types.CqlType;
+import com.cassandrajdbc.types.ColumnTypes;
+import com.cassandrajdbc.types.ColumnTypes.ColumnType;
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.TableMetadata;
 
@@ -27,7 +27,6 @@ import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.StatementVisitorAdapter;
 import net.sf.jsqlparser.statement.Statements;
@@ -225,8 +224,9 @@ public class CResultSetMetaData implements ResultSetMetaData {
             this.name = name;
             this.label = label;
             this.nullable = nullable;
-            this.type = Optional.ofNullable(type).map(CqlType::from).orElse(null);
-            this.valueType = Optional.ofNullable(type).map(CqlType::asJavaType).orElse(null);
+            ColumnType col = ColumnTypes.fromCqlType(type, java.util.function.Function.identity());
+            this.type = col == null ? null : col.getSqlDataType();
+            this.valueType = col == null ? null : col.getJavaType();
         }
         
     }

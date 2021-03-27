@@ -44,10 +44,6 @@ public class ItemListParser implements ItemsListVisitor {
             .collect(Collectors.toList());
     }
 
-    private Stream<Expression> extract(ExpressionList expressionList) {
-        return expressionList.getExpressions().stream();
-    }
-    
     List<List<Expression>> getValues() {
         return values;
     }

@@ -7,9 +7,10 @@ import java.sql.ParameterMetaData;
 import java.sql.SQLException;
 import java.sql.SQLType;
 import java.util.List;
+import java.util.function.Function;
 
-import com.cassandrajdbc.types.CqlType;
-import com.cassandrajdbc.types.CqlType.TypeInfo;
+import com.cassandrajdbc.types.ColumnTypes;
+import com.cassandrajdbc.types.ColumnTypes.ColumnType;
 import com.datastax.driver.core.CodecRegistry;
 import com.datastax.driver.core.DataType;
 
@@ -94,7 +95,7 @@ class CParameterMetadata implements ParameterMetaData{
         }
         
         public ParamInfo(DataType dataType) {
-            TypeInfo type = CqlType.resolve(dataType);
+            ColumnType type = ColumnTypes.fromCqlType(dataType, Function.identity());
             this.sqlType = type.getSqlType();
             this.javaType = type.getJavaType();
         }

@@ -25,8 +25,8 @@ import com.cassandrajdbc.CassandraURL;
 import com.cassandrajdbc.result.CResultSet;
 import com.cassandrajdbc.result.CResultSetMetaData;
 import com.cassandrajdbc.statement.CPreparedStatement;
-import com.cassandrajdbc.types.CqlType;
-import com.cassandrajdbc.types.CqlType.TypeInfo;
+import com.cassandrajdbc.types.ColumnTypes;
+import com.cassandrajdbc.types.ColumnTypes.ColumnType;
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.KeyspaceMetadata;
@@ -981,31 +981,34 @@ class CDatabaseMetaData implements DatabaseMetaData {
             .filter(tb -> matches(tb.getName(), tableNamePattern))
             .flatMap(tb -> tb.getColumns().stream()
                 .filter(col -> matches(col.getName(), columnNamePattern))
-                .map(col -> new Object[]{ 
-                        "",  // "TABLE_CAT
-                        tb.getKeyspace().getName(), // "TABLE_SCHEMA"
-                        tb.getName(), // "TABLE_NAME"
-                        col.getName(), // "COLUMN_NAME"
-                        CqlType.resolve(col.getType()).getSqlType().getVendorTypeNumber(),  // DATA_TYPE
-                        CqlType.resolve(col.getType()).getSqlType().getName(),  // TYPE_NAME
-                        800, // "COLUMN_SIZE"
-                        0, // "BUFFER_LENGTH"
-                        0, // "DECIMAL_DIGITS"
-                        10, // "NUM_PREC_RADIX"
-                        (tb.getPrimaryKey().contains(col) ? 0 : 1), // "NULLABLE"
-                        "", // "REMARKS"
-                        "", // "COLUMN_DEF"
-                        0, // "SQL_DATA_TYPE" 
-                        0, // "SQL_DATETIME_SUB"
-                        800, // "CHAR_OCTET_LENGTH"
-                        tb.getColumns().indexOf(col) + 1, // "ORDINAL_POSITION"
-                        "", // "IS_NULLABLE"
-                        null, // "SCOPE_CATLOG"
-                        null, // "SCOPE_SCHEMA"
-                        null, // "SCOPE_TABLE"
-                        null, // "SOURCE_DATA_TYPE"
-                        "NO", // "IS_AUTOINCREMENT"
-                        getTableOptionString(tb) // "OPTIONS"
+                .map(col -> {
+                    SQLType sqlType = ColumnTypes.fromCqlType(col.getType(), ColumnType::getSqlType);
+                    return new Object[]{ 
+                            "",  // "TABLE_CAT
+                            tb.getKeyspace().getName(), // "TABLE_SCHEMA"
+                            tb.getName(), // "TABLE_NAME"
+                            col.getName(), // "COLUMN_NAME"
+                            sqlType.getVendorTypeNumber(),  // DATA_TYPE
+                            sqlType.getName(),  // TYPE_NAME
+                            800, // "COLUMN_SIZE"
+                            0, // "BUFFER_LENGTH"
+                            0, // "DECIMAL_DIGITS"
+                            10, // "NUM_PREC_RADIX"
+                            (tb.getPrimaryKey().contains(col) ? 0 : 1), // "NULLABLE"
+                            "", // "REMARKS"
+                            "", // "COLUMN_DEF"
+                            0, // "SQL_DATA_TYPE" 
+                            0, // "SQL_DATETIME_SUB"
+                            800, // "CHAR_OCTET_LENGTH"
+                            tb.getColumns().indexOf(col) + 1, // "ORDINAL_POSITION"
+                            "", // "IS_NULLABLE"
+                            null, // "SCOPE_CATLOG"
+                            null, // "SCOPE_SCHEMA"
+                            null, // "SCOPE_TABLE"
+                            null, // "SOURCE_DATA_TYPE"
+                            "NO", // "IS_AUTOINCREMENT"
+                            getTableOptionString(tb) // "OPTIONS"
+                    };
                 }))
             .sorted(orderByColumn(0) // TABLE_CAT
                 .thenComparing(orderByColumn(1)) // TABLE_SCHEM
@@ -1082,7 +1085,7 @@ class CDatabaseMetaData implements DatabaseMetaData {
                         Stream.of(new SimpleEntry<String, DataType>("RESULT", fn.getReturnType())))
                     .filter(e -> matches(e.getKey(), columnNamePattern))
                     .map(e -> {
-                        SQLType type = CqlType.resolve(e.getValue()).getSqlType();
+                        SQLType type = ColumnTypes.fromCqlType(e.getValue(), ColumnType::getSqlType);
                         return new Object[]{
                                 "",     // "FUNCTION_CAT"
                                 fn.getKeyspace().getName(), // "FUNCTION_SCHEM"
@@ -1118,7 +1121,7 @@ class CDatabaseMetaData implements DatabaseMetaData {
             "SMALLINT:NULLABLE", "BOOLEAN:CASE_SENSITIVE", "SMALLINT:SEARCHABLE", "BOOLEAN:UNSIGNED_ATTRIBUTE", 
             "BOOLEAN:FIXED_PREC_SCALE", "BOOLEAN:AUTO_INCREMENT", "LOCAL_TYPE_NAME", "SMALLINT:MINIMUM_SCALE", 
             "SMALLINT:MAXIMUM_SCALE", "INTEGER:SQL_DATA_TYPE", "INTEGER:SQL_DATETIME_SUB", "INTEGER:NUM_PREC_RADIX");
-        return toResultSet(metadata, Arrays.stream(CqlType.values()).map(t -> {
+        return toResultSet(metadata, Arrays.stream(ColumnTypes.values()).map(t -> {
                 return new Object[] { 
                         t.getCqlType().getName().name(), // "TYPE_NAME"
                         t.getSqlType().getName(), // "DATA_TYPE"
@@ -1186,7 +1189,7 @@ class CDatabaseMetaData implements DatabaseMetaData {
                 AtomicInteger index = new AtomicInteger();
                 return tp.getFieldNames().stream()
                     .map(name -> {
-                        SQLType type = CqlType.resolve(tp.getFieldType(name)).getSqlType();
+                        SQLType type = ColumnTypes.fromCqlType(tp.getFieldType(name), ColumnType::getSqlType);
                         return new Object[]{
                              "", // "TYPE_CAT"
                              tp.getKeyspace(), // "TYPE_SCHEM"
@@ -1270,12 +1273,12 @@ class CDatabaseMetaData implements DatabaseMetaData {
                 .toArray(String[]::new);
         DataType[] dataTypes = Arrays.stream(columns)
                 .map(s -> s.split(":"))
-                .map(parts -> parts.length == 1 ? DataType.text() : CqlType.resolve(parts[0]).getCqlType())
+                .map(parts -> parts.length == 1 ? DataType.text() : ColumnTypes.forName(parts[0], ColumnType::getCqlType))
                 .toArray(DataType[]::new);
         return new CResultSetMetaData("system_schema", "keyspaces", columnNames, dataTypes);
     }
     
-    private boolean isTextType(TypeInfo t) {
+    private boolean isTextType(ColumnType t) {
         return t.getCqlType() == DataType.text() || t.getCqlType() == DataType.varchar();
     }
         

@@ -10,27 +10,19 @@ import java.sql.SQLType;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
-import java.util.ServiceLoader;
-import java.util.ServiceLoader.Provider;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
-import com.cassandrajdbc.util.Ordered;
 import com.datastax.driver.core.DataType;
 
 import net.sf.jsqlparser.statement.create.table.ColDataType;
 
-public class CqlType {
+// FIXME
+public class ColumnTypes {
     
-    private static final List<TypeMapping> typeMappings = ServiceLoader.load(TypeMapping.class).stream()
-            .map(Provider::get)
-            .sorted(Ordered.comparator())
-            .collect(Collectors.toList());
-    
-    public enum StandardTypes implements TypeInfo {
+    public enum StandardTypes implements ColumnType {
         VARCHAR(JDBCType.VARCHAR, DataType.varchar(), String.class),
         CHAR(JDBCType.CHAR, DataType.varchar(), String.class),
         TEXT(JDBCType.VARCHAR, DataType.text(), String.class),
@@ -79,65 +71,53 @@ public class CqlType {
         }
     }
     
-    public static TypeInfo[] values() {
+    public static ColumnType[] values() {
         return StandardTypes.values();
     }
-    
-    public static ColDataType from(DataType type) {
-        ColDataType result = new ColDataType();
-        result.setDataType(resolve(type).getSqlType().getName());
-        return result;
-    }
 
-    public static Class<?> asJavaType(DataType type) {
-        return resolveType(t -> t.getCqlType().equals(type))
-            .orElseThrow(() -> new IllegalArgumentException("Unsupported data type " + type + ", please register TypeMapping for this type"))
-            .getJavaType();
-    }
-    
-    public static DataType from(ColDataType type) {
-        return resolveType(t -> t.getSqlType().getName().equalsIgnoreCase(type.getDataType()))
-            .or(() -> resolveType(t -> t.getCqlType().getName().name().equalsIgnoreCase(type.getDataType())))
-            .orElseThrow(() -> new IllegalArgumentException("Unsupported data type " + type.getDataType() + ", please register TypeMapping for this type"))
-            .getCqlType();
-    }
-
-    public static TypeInfo resolve(DataType type) {
-        return resolveType(t -> t.getCqlType().equals(type))
-            .orElseThrow(() -> new IllegalArgumentException("Unsupported data type " + type + ", please register TypeMapping for this type"));
-    }
-
-    public static TypeInfo resolve(String typeName) {
+    public static <T> T forName(String typeName, Function<ColumnType, T> mapper) {
+        if(typeName == null) {
+            return null;
+        }
         return resolveType(t -> t.getSqlType().getName().equals(typeName))
             .or(() -> resolveType(t -> t.getCqlType().getName().name().equalsIgnoreCase(typeName)))
+            .map(mapper)
             .orElseThrow(() -> new IllegalArgumentException("Unsupported data type " + typeName + ", please register TypeMapping for this type"));
     }
 
-    private static Optional<TypeInfo> resolveType(Predicate<TypeInfo> criteria) {
+    public static <T> T fromCqlType(DataType type, Function<ColumnType, T> mapper) {
+        if(type == null) {
+            return null;
+        }
+        return resolveType(t -> t.getCqlType().equals(type))
+            .map(mapper)
+            .orElseThrow(() -> new IllegalArgumentException("Unsupported data type " + type + ", please register TypeMapping for this type"));
+    }
+    
+
+    private static Optional<ColumnType> resolveType(Predicate<ColumnType> criteria) {
         return Arrays.stream(StandardTypes.values())
-            .map(TypeInfo.class::cast)
+            .map(ColumnType.class::cast)
             .filter(criteria)
             .findFirst();
     }
     
     
-    public interface TypeMapping {
-        
-        boolean supports(ColDataType type);
-        
-        TypeInfo convert(ColDataType type);
-        
-    }
-    
-    public interface TypeInfo {
+    public interface ColumnType {
 
         SQLType getSqlType();
+        
         DataType getCqlType();
+        
         Class<?> getJavaType();
+        
+        default ColDataType getSqlDataType() {
+            ColDataType dataType = new ColDataType();
+            dataType.setDataType(getSqlType().getName());
+            return dataType;
+        }
         
     }
 
-    
-    
 }
 

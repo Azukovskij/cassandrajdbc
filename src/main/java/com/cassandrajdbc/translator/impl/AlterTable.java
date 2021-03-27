@@ -9,7 +9,8 @@ import com.cassandrajdbc.statement.StatementOptions;
 import com.cassandrajdbc.statement.StatementOptions.Collation;
 import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
-import com.cassandrajdbc.types.CqlType;
+import com.cassandrajdbc.types.ColumnTypes;
+import com.cassandrajdbc.types.ColumnTypes.ColumnType;
 import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.schemabuilder.Alter;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
@@ -41,7 +42,7 @@ public class AlterTable implements CqlBuilder<net.sf.jsqlparser.statement.alter.
         switch (operation) {
             case ADD:
                 return alter.addColumn(escape(column.getColumnName(), config))
-                    .type(CqlType.from(column.getColDataType()));
+                    .type(ColumnTypes.forName(column.getColDataType().getDataType(), ColumnType::getCqlType));
             case DROP:
                 return alter.dropColumn(escape(column.getColumnName(), config));
             default:
