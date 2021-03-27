@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import com.cassandrajdbc.expressions.ClauseParser;
+import com.cassandrajdbc.expressions.WhereParser;
 import com.cassandrajdbc.translator.SqlParser.SqlStatement;
 import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
@@ -35,7 +35,7 @@ public class Delete implements CqlBuilder<net.sf.jsqlparser.statement.delete.Del
         }
         RegularStatement[] deletes = resolveTables(stmt)
             .map(config::getTableMetadata)
-            .map(table -> ClauseParser.instance(table, config).apply(stmt.getWhere())
+            .map(table -> WhereParser.instance(table, config).apply(stmt.getWhere())
                 .collect(() -> QueryBuilder.delete().all().from(table), 
                         com.datastax.driver.core.querybuilder.Delete::where, 
                         (a,b) -> { throw new IllegalStateException("no parallel"); }) )

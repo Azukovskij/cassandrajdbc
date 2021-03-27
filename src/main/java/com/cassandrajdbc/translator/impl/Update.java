@@ -6,7 +6,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import com.cassandrajdbc.expressions.AssignmentParser;
-import com.cassandrajdbc.expressions.ClauseParser;
+import com.cassandrajdbc.expressions.WhereParser;
 import com.cassandrajdbc.translator.SqlParser.SqlStatement;
 import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
@@ -45,7 +45,7 @@ public class Update implements CqlBuilder<net.sf.jsqlparser.statement.update.Upd
 
         RegularStatement[] updates = stmt.getTables().stream()
             .map(config::getTableMetadata)
-            .map(table -> ClauseParser.instance(table, config).apply(stmt.getWhere())
+            .map(table -> WhereParser.instance(table, config).apply(stmt.getWhere())
                 .collect(() -> createAssignment(stmt, table, config), 
                     Assignments::where, (a,b) -> { throw new IllegalStateException("no parallel"); }))
             .toArray(RegularStatement[]::new);

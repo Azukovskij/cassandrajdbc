@@ -34,20 +34,20 @@ import net.sf.jsqlparser.schema.Column;
  * @author azukovskij
  *
  */
-public class ClauseParser extends ExpressionVisitorAdapter {
+public class WhereParser extends ExpressionVisitorAdapter {
 
     private final List<Clause> clauses = new ArrayList<>();
     private final ClusterConfiguration config;
     private final TableMetadata tableMetadata;
 
-    ClauseParser(TableMetadata tableMetadata, ClusterConfiguration config) {
+    WhereParser(TableMetadata tableMetadata, ClusterConfiguration config) {
         this.tableMetadata = tableMetadata;
         this.config = config;
     }
     
     public static Function<Expression, Stream<Clause>> instance(TableMetadata table, ClusterConfiguration config) {
         return list -> {
-            ClauseParser visitor = new ClauseParser(table, config);
+            WhereParser visitor = new WhereParser(table, config);
             list.accept(visitor);
             return visitor.clauses.stream();
         };

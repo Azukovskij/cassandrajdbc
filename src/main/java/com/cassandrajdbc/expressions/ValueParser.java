@@ -63,7 +63,7 @@ public class ValueParser extends ExpressionVisitorAdapter {
     
     private Object value = null;  
 
-    ValueParser() {}
+    protected ValueParser() {}
     
     public static Function<Expression, Object> instance() {
         return expr -> {

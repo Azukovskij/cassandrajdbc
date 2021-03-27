@@ -8,8 +8,9 @@ import com.cassandrajdbc.expressions.ValueParser;
 import com.cassandrajdbc.translator.SqlParser.SqlStatement;
 import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
-import com.cassandrajdbc.translator.instr.CStatement;
-import com.cassandrajdbc.translator.instr.SimpleCStatement;
+import com.cassandrajdbc.translator.stmt.CStatement;
+import com.cassandrajdbc.translator.stmt.ChainingCStatement;
+import com.cassandrajdbc.translator.stmt.SimpleCStatement;
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.TableMetadata;
@@ -18,7 +19,9 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import net.sf.jsqlparser.expression.Expression;
 
 public class Insert implements CqlBuilder<net.sf.jsqlparser.statement.insert.Insert> {
-
+    
+    private Select selectTransaltor = new Select();
+    
     @Override
     public Class<net.sf.jsqlparser.statement.insert.Insert> getInputType() {
         return net.sf.jsqlparser.statement.insert.Insert.class;
@@ -26,13 +29,19 @@ public class Insert implements CqlBuilder<net.sf.jsqlparser.statement.insert.Ins
     
     @Override
     public CStatement translate(SqlStatement<net.sf.jsqlparser.statement.insert.Insert> stmt, ClusterConfiguration config) {
+        net.sf.jsqlparser.statement.insert.Insert sql = stmt.getStatement();
+        if(sql.getSelect() != null) {
+            return new ChainingCStatement(selectTransaltor.translate(new SqlStatement(sql.getSelect()), config), row -> {
+                // FIXME
+                
+                throw new UnsupportedOperationException("Insert from select is not supported, query: '" + stmt + "'");
+            });
+        }
         return new SimpleCStatement(stmt, buildCql(stmt.getStatement(), config));
     }
 
     private RegularStatement buildCql(net.sf.jsqlparser.statement.insert.Insert stmt, ClusterConfiguration config) {
-        if(stmt.getSelect() != null) {
-            throw new UnsupportedOperationException("Insert from select is not supported, query: '" + stmt + "'");
-        }
+      
         TableMetadata table = config.getTableMetadata(stmt.getTable());
         
         RegularStatement[] inserts = ItemListParser.instance().apply(stmt.getItemsList())

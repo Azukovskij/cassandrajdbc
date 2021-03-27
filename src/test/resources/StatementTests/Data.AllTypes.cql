@@ -1,0 +1,12 @@
+insert into AllTypes (id, "value", "text", "int") values (c7af1c6b-4b0f-4e0e-ae43-50183f400608, 'value-0', "text-1", 1);
+insert into AllTypes (id, "value", "text", "int") values (317476b9-391c-4ae4-992f-1f398155c6e8, 'value-1', "text-1", 2);
+insert into AllTypes (id, "value", "text", "int") values (2fd1acc0-dfa6-4882-8f1e-7cbb773ab49a, 'value-2', "text-1", 3);
+insert into AllTypes (id, "value", "text", "int") values (f63da0c8-0ca3-4e28-9383-32a54712531f, 'value-3', "text-2", 4);
+insert into AllTypes (id, "value", "text", "int") values (fbce294f-3ac1-4922-bac1-9a50b3890b0e, 'value-4', "text-2", 5);
+insert into AllTypes (id, "value", "text", "int") values (ae78370e-d5d2-4d1e-8951-49eaadf0dc31, 'value-5', "text-2", 6);
+insert into AllTypes (id, "value", "text", "int") values (f4ca6543-92b4-4c7b-983b-5baca67b6cd0, 'value-6', "text-3", 6);
+insert into AllTypes (id, "value", "text", "int") values (75d13a0c-0b83-414c-a8a6-de3774e893f8, 'value-7', "text-3", 6);
+insert into AllTypes (id, "value", "text", "int") values (8bc98713-61dd-41a9-a97b-32804dd72a19, 'value-8', "text-3", 7);
+insert into AllTypes (id, "value", "text", "int") values (7dcba3ba-f305-4678-8276-92b86857675c, 'value-8', "text-4", 8);
+insert into AllTypes (id, "value", "text", "int") values (8489f511-0833-4759-95f4-41fb9d26cee6, 'value-9', "text-4", 8);
+insert into AllTypes (id, "value", "text", "int") values (4163a72e-eadc-45df-862f-4dad4401e2c9, 'value-10', "text-4", 9);
