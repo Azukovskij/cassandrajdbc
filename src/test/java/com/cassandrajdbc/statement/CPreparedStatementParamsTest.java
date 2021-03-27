@@ -39,7 +39,18 @@ import org.junit.runners.Parameterized;
 import com.cassandrajdbc.connection.CassandraConnection;
 import com.cassandrajdbc.test.util.MethodPointer;
 import com.cassandrajdbc.types.SerialNClob;
+import com.cassandrajdbc.types.codec.BlobCodec;
+import com.cassandrajdbc.types.codec.ByteArrayCodec;
+import com.cassandrajdbc.types.codec.ClobCodec;
+import com.cassandrajdbc.types.codec.InputStreamCodec;
+import com.cassandrajdbc.types.codec.SqlDateCodec;
+import com.cassandrajdbc.types.codec.SqlTimeCodec;
+import com.cassandrajdbc.types.codec.SqlTimestampCodec;
+import com.cassandrajdbc.types.codec.StringReaderCodec;
+import com.cassandrajdbc.types.codec.StringStreamCodec;
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.CodecRegistry;
+import com.datastax.driver.core.TypeCodec;
 
 @RunWith(Parameterized.class)
 public class CPreparedStatementParamsTest {
@@ -63,6 +74,12 @@ public class CPreparedStatementParamsTest {
         connection = new CassandraConnection(Cluster.builder()
             .addContactPoint("localhost")
             .build().connect(), null);
+        
+        CodecRegistry registry = connection.getSession().getCluster().getConfiguration().getCodecRegistry();
+        registry.register(new TypeCodec[] { new SqlDateCodec(registry), new SqlTimeCodec(registry), new SqlTimestampCodec(registry),
+            new ByteArrayCodec(registry), new InputStreamCodec(registry), new InputStreamCodec(registry), 
+            new StringReaderCodec(registry), new BlobCodec(registry), new StringStreamCodec(registry), new ClobCodec(registry) });
+        
         connection.getSession().execute("CREATE KEYSPACE IF NOT EXISTS " + KEYSPACE_NAME
             + " WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
     }

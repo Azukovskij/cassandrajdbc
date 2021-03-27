@@ -4,7 +4,8 @@ package com.cassandrajdbc.translator.impl;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
-import com.cassandrajdbc.expressions.CqlValue;
+import com.cassandrajdbc.expressions.ItemListParser;
+import com.cassandrajdbc.expressions.ValueParser;
 import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
 import com.datastax.driver.core.ColumnMetadata;
@@ -12,6 +13,8 @@ import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.TableMetadata;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
+
+import net.sf.jsqlparser.expression.Expression;
 
 public class Insert implements CqlBuilder<net.sf.jsqlparser.statement.insert.Insert> {
 
@@ -26,25 +29,18 @@ public class Insert implements CqlBuilder<net.sf.jsqlparser.statement.insert.Ins
             throw new UnsupportedOperationException("Insert from select is not supported, query: '" + stmt + "'");
         }
         TableMetadata table = config.getTableMetadata(stmt.getTable());
-        RegularStatement[] inserts = CqlValue.toCqlValueList(stmt.getItemsList()).stream()
-            .map(values -> IntStream.range(0, stmt.getColumns().size()).boxed()
+        
+        RegularStatement[] inserts = ItemListParser.instance().apply(stmt.getItemsList())
+            .map(exprList -> IntStream.range(0, stmt.getColumns().size()).boxed()
                 .collect(() -> QueryBuilder.insertInto(table), 
-                    (insert, i) -> addValue(insert, config.getColumnMetadata(table, stmt.getColumns().get(i).getColumnName()), values[i]), 
+                    (insert, i) -> addValue(insert, config.getColumnMetadata(table, stmt.getColumns().get(i).getColumnName()), exprList.get(i)), 
                     (a,b) -> { throw new IllegalStateException("no parallel"); }))
             .toArray(RegularStatement[]::new);
         return inserts.length == 1 ? inserts[0] : QueryBuilder.unloggedBatch(inserts);
     }
     
-    private com.datastax.driver.core.querybuilder.Insert addValue(com.datastax.driver.core.querybuilder.Insert insert, ColumnMetadata column, Object value) {
-        return insert.value(column.getName(), normalize(column, value));
-    }
-
-    // FIXME move to ConverterRegistry
-    private Object normalize(ColumnMetadata col, Object val) {
-        if(col.getType() == DataType.uuid() && val instanceof String) {
-            return UUID.fromString((String) val);
-        }
-        return val;
+    private com.datastax.driver.core.querybuilder.Insert addValue(com.datastax.driver.core.querybuilder.Insert insert, ColumnMetadata column, Expression valueExpr) {
+        return insert.value(column.getName(), ValueParser.instance(column).apply(valueExpr));
     }
 
 }

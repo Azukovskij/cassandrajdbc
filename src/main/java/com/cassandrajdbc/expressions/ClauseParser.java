@@ -3,6 +3,7 @@
 package com.cassandrajdbc.expressions;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.BiFunction;
@@ -32,10 +33,14 @@ import net.sf.jsqlparser.expression.operators.relational.MinorThanEquals;
 import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
 import net.sf.jsqlparser.schema.Column;
 
+/**
+ * where (...) 
+ * 
+ * @author azukovskij
+ *
+ */
 public class ClauseParser extends ExpressionVisitorAdapter {
 
-    private final Function<Expression, Stream<Object>> valueParser = ValueParser.instance();
-    private final Function<ItemsList, Stream<Stream<Expression>>> listParser = ItemsListParser.instance();
     private final List<Clause> clauses = new ArrayList<>();
     private final ClusterConfiguration config;
     private final TableMetadata tableMetadata;
@@ -56,11 +61,10 @@ public class ClauseParser extends ExpressionVisitorAdapter {
     @Override
     public void visit(InExpression expr) {
         ColumnMetadata column = resolveColumn(expr.getLeftExpression());
-        clauses.add(QueryBuilder.in(column.getName(), listParser.apply(expr.getRightItemsList())
-            .flatMap(Function.identity())
-            .flatMap(valueParser)
-            .map(obj -> normalize(column, obj))
-            .collect(Collectors.toList())));
+        clauses.add(QueryBuilder.in(column.getName(), ItemListParser.instance().apply(expr.getRightItemsList())
+            .flatMap(List::stream)
+            .map(ValueParser.instance(column))
+            .toArray()));
     }
     
     @Override
@@ -104,20 +108,9 @@ public class ClauseParser extends ExpressionVisitorAdapter {
     }
 
     private void doVisit(BinaryExpression expr, BiFunction<String, Object, Clause> matcher) {
-        valueParser.apply(expr.getRightExpression())
-            .map(value -> {
-                ColumnMetadata column = resolveColumn(expr.getLeftExpression());
-                return matcher.apply(column.getName(), normalize(column, value));
-            })
-            .forEach(clauses::add);
-    }
-    
-    // FIXME move to ConverterRegistry
-    private Object normalize(ColumnMetadata col, Object val) {
-        if(col.getType() == DataType.uuid() && val instanceof String) {
-            return UUID.fromString((String) val);
-        }
-        return val;
+        ColumnMetadata column = resolveColumn(expr.getLeftExpression());
+        clauses.add(matcher.apply(column.getName(), 
+            ValueParser.instance(column).apply(expr.getRightExpression())));
     }
     
     private ColumnMetadata resolveColumn(Expression expr) {
