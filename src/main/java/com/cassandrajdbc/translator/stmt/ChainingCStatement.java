@@ -10,20 +10,19 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import com.cassandrajdbc.statement.CPreparedStatement;
-import com.datastax.driver.core.Row;
 
 public class ChainingCStatement implements CStatement {
     
     private final CStatement delegate;
-    private final Function<Row, CStatement> next;
+    private final Function<CRow, CStatement> next;
     
-    public ChainingCStatement(CStatement delegate, Function<Row, CStatement> next) {
+    public ChainingCStatement(CStatement delegate, Function<CRow, CStatement> next) {
         this.delegate = delegate;
         this.next = next;
     }
 
     @Override
-    public Iterable<Row> execute(CPreparedStatement stmt, List<Object> params) throws SQLException {
+    public Iterable<CRow> execute(CPreparedStatement stmt, List<Object> params) throws SQLException {
         return stream(delegate.execute(stmt, params))
             .flatMap(row -> {
                 try {
@@ -35,7 +34,7 @@ public class ChainingCStatement implements CStatement {
             .collect(Collectors.toList());
     }
     
-    private Stream<Row> stream(Iterable<Row> rows) {
+    private Stream<CRow> stream(Iterable<CRow> rows) {
         return StreamSupport.stream(rows.spliterator(), false);
     }
     

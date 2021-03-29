@@ -21,3 +21,7 @@ CREATE TABLE Simple (
     id uuid,
     "value" varchar,
     PRIMARY KEY(id));
+    
+    
+CREATE CUSTOM INDEX SimpleValueIdx ON Simple ("value") USING 'org.apache.cassandra.index.sasi.SASIIndex' WITH OPTIONS = {'mode': 'CONTAINS', 'case_sensitive': 'false'};
+    

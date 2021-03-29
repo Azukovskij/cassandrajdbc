@@ -11,10 +11,11 @@ import org.slf4j.LoggerFactory;
 import com.cassandrajdbc.statement.CPreparedStatement;
 import com.cassandrajdbc.translator.SqlParser.SqlStatement;
 import com.datastax.driver.core.RegularStatement;
-import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.exceptions.QueryValidationException;
+import com.google.common.collect.Iterables;
 
 public class SimpleCStatement implements CStatement {
     
@@ -29,21 +30,26 @@ public class SimpleCStatement implements CStatement {
     }
 
     @Override
-    public ResultSet execute(CPreparedStatement stmt, List<Object> params) throws SQLException {
+    public Iterable<CRow> execute(CPreparedStatement stmt, List<Object> params) throws SQLException {
         Session session = stmt.getConnection().getSession();
         try {
-            return session.execute(params.isEmpty() 
+            return toCRow(session.execute(params.isEmpty() 
                 ? cql 
-                : stmt.getConnection().getSession().prepare(cql).bind(params.toArray(Object[]::new)));
+                : stmt.getConnection().getSession().prepare(cql).bind(params.toArray(Object[]::new))));
         } catch (QueryValidationException | UnsupportedOperationException | IllegalStateException e) {
             if(sql.getSql() == null) {
                 throw e;
             }
             logger.trace("CQL failed, falling back to native sql", e);
-            return session.execute(params.isEmpty() 
+            return toCRow(session.execute(params.isEmpty() 
                 ? new SimpleStatement(sql.getSql()) 
-                : stmt.getConnection().getSession().prepare(sql.getSql()).bind(params.toArray(Object[]::new)));
+                : stmt.getConnection().getSession().prepare(sql.getSql()).bind(params.toArray(Object[]::new))));
         }
+    }
+
+    private Iterable<CRow> toCRow(Iterable<Row> rows) {
+        return Iterables.transform(rows, row -> 
+            new CRow((i,t) -> Object.class.equals(t) ? row.getObject(i) : row.get(i, t), row.getColumnDefinitions().size()));
     }
 
     @Override

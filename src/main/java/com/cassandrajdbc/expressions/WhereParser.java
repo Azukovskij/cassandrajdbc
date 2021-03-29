@@ -47,6 +47,9 @@ public class WhereParser extends ExpressionVisitorAdapter {
     
     public static Function<Expression, Stream<Clause>> instance(TableMetadata table, ClusterConfiguration config) {
         return list -> {
+            if(list == null) {
+                return Stream.empty();
+            }
             WhereParser visitor = new WhereParser(table, config);
             list.accept(visitor);
             return visitor.clauses.stream();
@@ -99,6 +102,9 @@ public class WhereParser extends ExpressionVisitorAdapter {
 
     @Override
     public void visit(LikeExpression expr) {
+        if(expr.isNot()) {
+            throw new UnsupportedOperationException();
+        }
         doVisit(expr, QueryBuilder::like);
     }
 

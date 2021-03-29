@@ -7,7 +7,7 @@ import java.util.Optional;
 public class Either<A,B> {
 
     private final A one;
-    private B other;
+    private final B other;
     
     private Either(A one, B other) {
         this.one = one;

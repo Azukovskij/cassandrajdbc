@@ -44,8 +44,8 @@ import com.cassandrajdbc.connection.CassandraConnection;
 import com.cassandrajdbc.result.CResultSet;
 import com.cassandrajdbc.result.CResultSetMetaData;
 import com.cassandrajdbc.translator.SqlToClqTranslator;
+import com.cassandrajdbc.translator.stmt.CStatement.CRow;
 import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.Row;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.CharStreams;
@@ -108,7 +108,7 @@ public class CPreparedStatement implements PreparedStatement {
     /*
      * query operations
      */
-    public Iterable<Row> executeInternal(String sql, List<Object> params) throws SQLException {
+    public Iterable<CRow> executeInternal(String sql, List<Object> params) throws SQLException {
         if(sql == null) {
             return null;
         }

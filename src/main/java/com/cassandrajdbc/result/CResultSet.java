@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.stream.IntStream;
 
+import com.cassandrajdbc.translator.stmt.CStatement.CRow;
 import com.cassandrajdbc.types.SerialNClob;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.LocalDate;
@@ -60,7 +61,7 @@ public class CResultSet implements ResultSet {
         this.iterator = iterator(rows);
     }
 
-    public CResultSet(Statement statement, CResultSetMetaData metadata, Iterator<com.datastax.driver.core.Row> results) throws SQLException {
+    public CResultSet(Statement statement, CResultSetMetaData metadata, Iterator<CRow> results) throws SQLException {
         this.statement = statement;
         this.metadata = metadata;
         this.rows = () -> new ResultSetIterator(results);
@@ -1182,9 +1183,9 @@ public class CResultSet implements ResultSet {
             this.values = (i,t) -> columns[i];
         }
 
-        Row(int index, com.datastax.driver.core.Row row) {
+        Row(int index, CRow row) {
             this.index = index + 1;
-            this.values = (i,t) -> Object.class.equals(t) ? row.getObject(i) : row.get(i, t);
+            this.values = (i,t) -> row.getColumn(i, t);
         }
         
         @SuppressWarnings("unchecked")
@@ -1203,10 +1204,10 @@ public class CResultSet implements ResultSet {
     
     private static class ResultSetIterator implements Iterator<Row> {
         
-        private final Iterator<com.datastax.driver.core.Row> delegate;
+        private final Iterator<CRow> delegate;
         private final AtomicInteger index = new AtomicInteger();
 
-        public ResultSetIterator(Iterator<com.datastax.driver.core.Row> delegate) {
+        public ResultSetIterator(Iterator<CRow> delegate) {
             this.delegate = delegate;
         }
 

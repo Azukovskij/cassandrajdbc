@@ -18,6 +18,7 @@ public class ResultSetMatcher<T> extends BaseMatcher<ResultSet> {
     private final Collection<Object> expected;
     private final CheckedFunction<ResultSet, T> mapper;
     private final int expectedCount;
+    private List<?> lastResult;
     
     private ResultSetMatcher(Collection<Object> expected, CheckedFunction<ResultSet, T> mapper, int expectedCount) {
         this.expected = expected;
@@ -45,6 +46,7 @@ public class ResultSetMatcher<T> extends BaseMatcher<ResultSet> {
         }
         try {
             List<T> actual = readFully((ResultSet) object);
+            lastResult = actual;
             if(expected == null) {
                 return expectedCount == actual.size();
             }
@@ -58,9 +60,9 @@ public class ResultSetMatcher<T> extends BaseMatcher<ResultSet> {
     @Override
     public void describeTo(Description description) {
         if(expected == null) {
-            description.appendText("ResultSet containing ").appendValue(expected);
+            description.appendText("ResultSet with ").appendValue(expectedCount).appendText(" elements, got " + lastResult.size());
         } else {
-            description.appendText("ResultSet with ").appendValue(expectedCount).appendText(" elements");
+            description.appendText("ResultSet containing ").appendValue(expected).appendText(", got " + lastResult);
         }
     }
 

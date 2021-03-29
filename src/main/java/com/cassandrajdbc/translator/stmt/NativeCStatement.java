@@ -6,9 +6,10 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.cassandrajdbc.statement.CPreparedStatement;
-import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
+import com.google.common.collect.Iterables;
 
 public class NativeCStatement implements CStatement {
 
@@ -19,7 +20,7 @@ public class NativeCStatement implements CStatement {
     }
 
     @Override
-    public ResultSet execute(CPreparedStatement stmt, List<Object> params) throws SQLException {
+    public Iterable<CRow> execute(CPreparedStatement stmt, List<Object> params) throws SQLException {
         Session session = stmt.getConnection().getSession();
         com.datastax.driver.core.Statement prepared = params.isEmpty() 
                 ? new SimpleStatement(nativeSQL)
@@ -27,7 +28,12 @@ public class NativeCStatement implements CStatement {
                     .bind(params.toArray(Object[]::new));
         prepared.setFetchSize(stmt.getFetchSize());
         prepared.setReadTimeoutMillis(stmt.getQueryTimeout());
-        return session.execute(prepared);
+        return toCRow(session.execute(prepared));
+    }
+
+    private Iterable<CRow> toCRow(Iterable<Row> rows) {
+        return Iterables.transform(rows, row -> 
+            new CRow((i,t) -> Object.class.equals(t) ? row.getObject(i) : row.get(i, t), row.getColumnDefinitions().size()));
     }
     
     @Override
