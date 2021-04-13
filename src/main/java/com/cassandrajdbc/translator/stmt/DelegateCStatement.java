@@ -4,24 +4,29 @@ package com.cassandrajdbc.translator.stmt;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Objects;
-import java.util.function.UnaryOperator;
+import java.util.function.BiFunction;
 
 import com.cassandrajdbc.statement.CPreparedStatement;
+import com.cassandrajdbc.translator.SqlParser.SqlStatement;
 
-public class MappingCStatement implements CStatement {
+public class DelegateCStatement implements CStatement {
     
-    private final CStatement delegate;
-    private final UnaryOperator<Iterable<CRow>> resultMapper;
-
-    public MappingCStatement(CStatement delegate, UnaryOperator<Iterable<CRow>> resultMapper) {
-        this.delegate = Objects.requireNonNull(delegate);
-        this.resultMapper = Objects.requireNonNull(resultMapper);
+    private SqlStatement<?> sql;
+    private BiFunction<CPreparedStatement, List<Object>, CStatement> delegate;
+    
+    public DelegateCStatement(SqlStatement<?> sql, BiFunction<CPreparedStatement, List<Object>, CStatement> delegate) {
+        this.sql = sql;
+        this.delegate = delegate;
     }
 
     @Override
     public Iterable<CRow> execute(CPreparedStatement stmt, List<Object> params) throws SQLException {
-        return resultMapper.apply(delegate.execute(stmt, params));
+        return delegate.apply(stmt, params).execute(stmt, params);
+    }
+
+    @Override
+    public String toNativeSQL() {
+        return sql.getSql();
     }
 
 }

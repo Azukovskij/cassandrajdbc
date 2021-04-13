@@ -4,6 +4,7 @@ package com.cassandrajdbc.translator.impl;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.cassandrajdbc.expressions.WhereParser;
@@ -11,6 +12,7 @@ import com.cassandrajdbc.translator.SqlParser.SqlStatement;
 import com.cassandrajdbc.translator.SqlToClqTranslator.ClusterConfiguration;
 import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
 import com.cassandrajdbc.translator.stmt.CStatement;
+import com.cassandrajdbc.translator.stmt.DelegateCStatement;
 import com.cassandrajdbc.translator.stmt.SimpleCStatement;
 import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
@@ -25,22 +27,34 @@ public class Delete implements CqlBuilder<net.sf.jsqlparser.statement.delete.Del
     }
 
     @Override
-    public CStatement translate(SqlStatement<net.sf.jsqlparser.statement.delete.Delete> stmt, ClusterConfiguration config) {
-        return new SimpleCStatement(stmt, buildCql(stmt.getStatement(), config));
-    }
-    
-    private RegularStatement buildCql(net.sf.jsqlparser.statement.delete.Delete stmt, ClusterConfiguration config) {
-        if(stmt.getJoins() != null) {
-            throw new UnsupportedOperationException("joins not supported " + stmt);
+    public CStatement translate(SqlStatement<net.sf.jsqlparser.statement.delete.Delete> sql, ClusterConfiguration config) {
+        net.sf.jsqlparser.statement.delete.Delete stmt = sql.getStatement();
+        checkNullOrEmpty(stmt.getJoins());
+        checkNullOrEmpty(stmt.getLimit());
+        checkNullOrEmpty(stmt.getOrderByElements());
+        
+        List<WhereParser> where = resolveTables(stmt)
+            .map(table -> new WhereParser(stmt.getWhere(), table, config))
+            .collect(Collectors.toList());
+        
+        if (where.stream().anyMatch(w -> !w.getSubselects().isEmpty())) {
+            return new DelegateCStatement(sql, (pstmt, params) -> {
+                RegularStatement[] deletes1 = where.stream()
+                    .map(w -> Stream.concat(w.getClauses().stream(), w.getSubselects().stream()
+                            .map(ss -> ss.extract(pstmt, params)))
+                        .collect(() -> QueryBuilder.delete().all().from(w.getTableMetadata()), 
+                                com.datastax.driver.core.querybuilder.Delete::where, this::noparallel) )
+                    .toArray(RegularStatement[]::new);
+                return new SimpleCStatement(sql, deletes1.length == 1 ? deletes1[0] : QueryBuilder.unloggedBatch(deletes1));
+            });
         }
-        RegularStatement[] deletes = resolveTables(stmt)
-            .map(config::getTableMetadata)
-            .map(table -> WhereParser.instance(table, config).apply(stmt.getWhere())
-                .collect(() -> QueryBuilder.delete().all().from(table), 
-                        com.datastax.driver.core.querybuilder.Delete::where, 
-                        (a,b) -> { throw new IllegalStateException("no parallel"); }) )
+        
+        RegularStatement[] deletes2 = where.stream()
+            .map(w -> w.getClauses().stream()
+                .collect(() -> QueryBuilder.delete().all().from(w.getTableMetadata()), 
+                        com.datastax.driver.core.querybuilder.Delete::where, this::noparallel) )
             .toArray(RegularStatement[]::new);
-        return deletes.length == 1 ? deletes[0] : QueryBuilder.unloggedBatch(deletes);
+        return new SimpleCStatement(sql, deletes2.length == 1 ? deletes2[0] : QueryBuilder.unloggedBatch(deletes2));
     }
 
     private Stream<Table> resolveTables(net.sf.jsqlparser.statement.delete.Delete stmt) {
@@ -49,6 +63,25 @@ public class Delete implements CqlBuilder<net.sf.jsqlparser.statement.delete.Del
             .orElseGet(() -> Optional.ofNullable(stmt.getTables())
                 .map(List::stream)
                 .orElseGet(Stream::empty));
+    }
+    
+    private static void checkNullOrEmpty(Object object) {
+        if(object == null || "".equals(object)) {
+            return;
+        } 
+        if(object instanceof Iterable && 
+            !((Iterable<?>)object).iterator().hasNext()) {
+            return;
+        }
+        unsupported();
+    }
+    
+    private static <T> T unsupported() {
+        throw new UnsupportedOperationException();
+    }
+
+    private <A,B> void noparallel(A a, B b) {
+        throw new IllegalStateException("no parallel");
     }
 
 }

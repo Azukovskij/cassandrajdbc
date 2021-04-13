@@ -4,8 +4,10 @@ package com.cassandrajdbc.translator.stmt;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.cassandrajdbc.statement.CPreparedStatement;
+import com.datastax.driver.core.ColumnDefinitions.Definition;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
@@ -33,7 +35,13 @@ public class NativeCStatement implements CStatement {
 
     private Iterable<CRow> toCRow(Iterable<Row> rows) {
         return Iterables.transform(rows, row -> 
-            new CRow((i,t) -> Object.class.equals(t) ? row.getObject(i) : row.get(i, t), row.getColumnDefinitions().size()));
+            new CRow(getColumnNames(row), (i,t) -> Object.class.equals(t) ? row.getObject(i) : row.get(i, t)));
+    }
+    
+    private List<String> getColumnNames(Row row) {
+        return row.getColumnDefinitions().asList().stream()
+            .map(Definition::getName)
+            .collect(Collectors.toList());
     }
     
     @Override

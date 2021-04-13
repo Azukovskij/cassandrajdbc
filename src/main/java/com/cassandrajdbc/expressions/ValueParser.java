@@ -63,26 +63,21 @@ public class ValueParser extends ExpressionVisitorAdapter {
     
     private Object value = null;  
 
-    protected ValueParser() {}
+    public ValueParser(Expression expr) {
+        Optional.ofNullable(expr).ifPresent(e -> e.accept(this));
+    }
     
     public static Function<Expression, Object> instance() {
         return expr -> {
-            ValueParser visitor = new ValueParser();
-            expr.accept(visitor);
-            
-            return visitor.getValue();
+            return new ValueParser(expr).getValue();
         };
     }
     
     public static Function<Expression, Object> instance(ColumnMetadata col) {
         return expr -> {
-            ValueParser visitor = new ValueParser();
-            expr.accept(visitor);
-            
-            return convertInternal(col, visitor.getValue());
+            return convertInternal(col, new ValueParser(expr).getValue());
         };
     }
-    
 
     
     private static Object convertInternal(ColumnMetadata col, Object val) {
@@ -96,61 +91,61 @@ public class ValueParser extends ExpressionVisitorAdapter {
     @Override
     public void visit(SignedExpression expr) {
         Object number = ValueParser.instance().apply(expr.getExpression());
-        value = expr.getSign() == '+' ? number : negate(number, expr);
+        value(expr.getSign() == '+' ? number : negate(number, expr));;
     }
 
     @Override
     public void visit(NullValue nullValue) {
-        value = null;
+        value((Object)null);
     }
 
     @Override
     public void visit(StringValue stringValue) {
         if(stringValue.getValue().matches("\\d{4}-\\d{2}-\\d{2}")) {
-            value = java.time.LocalDate.parse(stringValue.getValue())
+            value(java.time.LocalDate.parse(stringValue.getValue())
                 .minusMonths(1)
-                .format(java.time.format.DateTimeFormatter.ISO_DATE); // new java.sql.Date constructor month starting with 0 fix (inconsistency between string->date and date->date inserts) 
+                .format(java.time.format.DateTimeFormatter.ISO_DATE));; // new java.sql.Date constructor month starting with 0 fix (inconsistency between string->date and date->date inserts) 
         } else {
-            value = stringValue.getValue();
+            value(stringValue.getValue());
         }
     }
     
     @Override
     public void visit(DoubleValue doubleValue) {
-        value = doubleValue.getValue();
+        value(doubleValue.getValue());
     }
 
     @Override
     public void visit(LongValue longValue) {
-        value = longValue.getValue();
+        value(longValue.getValue());
     }
 
     @Override
     public void visit(DateValue dateValue) {
-        value = convert(dateValue.getValue(), v -> new Date(v.getTime()));
+        value(convert(dateValue.getValue(), v -> new Date(v.getTime())));
     }
 
     @Override
     public void visit(TimestampValue timestampValue) {
-        value = convert(timestampValue.getValue(), v -> new Date(v.getTime()));
+        value(convert(timestampValue.getValue(), v -> new Date(v.getTime())));
     }
     
     @Override
     public void visit(TimeValue timeValue) {
-        value = convert(timeValue.getValue(), v -> v.getTime());
+        value(convert(timeValue.getValue(), v -> v.getTime()));
     }
 
     @Override
     public void visit(HexValue hexValue) {
-        value = hexValue.getValue();
+        value(hexValue.getValue());
     }
     
     @Override
     public void visit(Column column) {
         if("TRUE".equals(column.getColumnName())) {
-            value = true;
+            value(true);
         } else if("FALSE".equals(column.getColumnName())) {
-            value = false;
+            value(false);
         } else {
             unknown(column);
         }
@@ -158,7 +153,7 @@ public class ValueParser extends ExpressionVisitorAdapter {
 
     @Override
     public void visit(JdbcParameter param) {
-        value = QueryBuilder.bindMarker();
+        value(QueryBuilder.bindMarker());
     }
 
     @Override
@@ -170,35 +165,35 @@ public class ValueParser extends ExpressionVisitorAdapter {
     public void visit(Addition addition) {
         Object[] vals = extractValues(addition);
         if(vals[0] instanceof String || vals[1] instanceof String) {
-            value = String.valueOf(vals[0]) + String.valueOf(vals[1]);
+            value(String.valueOf(vals[0]) + String.valueOf(vals[1]));
         } else {
-            value = applyNumeric(addition, BigDecimal::add);
+            value(applyNumeric(addition, BigDecimal::add));
         }
     }
     
     @Override
     public void visit(Division division) {
-        value = applyNumeric(division, BigDecimal::divide);
+        value(applyNumeric(division, BigDecimal::divide));
     }
 
     @Override
     public void visit(Multiplication multiplication) {
-        value = applyNumeric(multiplication, BigDecimal::multiply);
+        value(applyNumeric(multiplication, BigDecimal::multiply));
     }
 
     @Override
     public void visit(Subtraction subtraction) {
-        value = applyNumeric(subtraction, BigDecimal::subtract);
+        value(applyNumeric(subtraction, BigDecimal::subtract));
     }
 
     @Override
     public void visit(AndExpression andExpression) {
-        value = applyBoolean(andExpression, (a,b) -> a && b);
+        value(applyBoolean(andExpression, (a,b) -> a && b));
     }
 
     @Override
     public void visit(OrExpression orExpression) {
-        value = applyBoolean(orExpression, (a,b) -> a || b);
+        value(applyBoolean(orExpression, (a,b) -> a || b));;
     }
 
     @Override
@@ -232,7 +227,7 @@ public class ValueParser extends ExpressionVisitorAdapter {
     @Override
     public void visit(EqualsTo equalsTo) {
         Object[] vals = extractValues(equalsTo);
-        value = Objects.equal(vals[0], vals[1]);
+        value(Objects.equal(vals[0], vals[1]));
     }
 
     @Override
@@ -326,6 +321,10 @@ public class ValueParser extends ExpressionVisitorAdapter {
         return value;
     }
     
+    public void value(Object value) {
+        this.value = value;
+    }
+    
     private Boolean applyBoolean(BinaryExpression expression, BiFunction<Boolean, Boolean, Boolean> op) {
         Object[] vals = extractValues(expression);
         return op.apply(toBoolean(vals[0]), toBoolean(vals[1]));
@@ -357,10 +356,8 @@ public class ValueParser extends ExpressionVisitorAdapter {
     }
 
     private Object[] extractValues(BinaryExpression expression) {
-        ValueParser left = new ValueParser();
-        expression.getLeftExpression().accept(left);
-        ValueParser right = new ValueParser();
-        expression.getRightExpression().accept(right);
+        ValueParser left = new ValueParser(expression.getLeftExpression());
+        ValueParser right = new ValueParser(expression.getRightExpression());
         return new Object[] {left.getValue(), right.getValue()};
     }
 

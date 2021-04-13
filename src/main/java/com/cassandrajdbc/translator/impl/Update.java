@@ -1,7 +1,9 @@
 /* Copyright © 2020 EIS Group and/or one of its affiliates. All rights reserved. Unpublished work under U.S. copyright laws.
  CONFIDENTIAL AND TRADE SECRET INFORMATION. No portion of this work may be copied, distributed, modified, or incorporated into any other media without EIS Group prior written consent.*/
 package com.cassandrajdbc.translator.impl;
+import java.util.List;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -28,28 +30,36 @@ public class Update implements CqlBuilder<net.sf.jsqlparser.statement.update.Upd
     }
     
     @Override
-    public CStatement translate(SqlStatement<net.sf.jsqlparser.statement.update.Update> stmt, ClusterConfiguration config) {
-        return new SimpleCStatement(stmt, buildCql(stmt.getStatement(), config));
-    }
-
-    private RegularStatement buildCql(net.sf.jsqlparser.statement.update.Update stmt, ClusterConfiguration config) {
-        if(stmt.getJoins() != null) {
-            throw new UnsupportedOperationException("joins not supported " + stmt);
+    public CStatement translate(SqlStatement<net.sf.jsqlparser.statement.update.Update> sql, ClusterConfiguration config) {
+        net.sf.jsqlparser.statement.update.Update stmt = sql.getStatement();
+        checkNullOrEmpty(stmt.getJoins());
+        checkNullOrEmpty(stmt.getSelect());
+        checkNullOrEmpty(stmt.getLimit());
+        checkNullOrEmpty(stmt.getReturningExpressionList());
+        
+        List<WhereParser> where = stmt.getTables().stream()
+            .map(table -> new WhereParser(stmt.getWhere(), table, config))
+            .collect(Collectors.toList());
+        
+        if (where.stream().anyMatch(w -> !w.getSubselects().isEmpty())) {
+            return (pstmt, params) -> {
+                RegularStatement[] updates1 = where.stream()
+                    .map(w -> Stream.concat(w.getClauses().stream(), w.getSubselects().stream()
+                            .map(estmt -> estmt.extract(pstmt, params)))
+                        .collect(() -> createAssignment(stmt, w.getTableMetadata(), config), 
+                            Assignments::where, this::noparallel))
+                    .toArray(RegularStatement[]::new);
+                return new SimpleCStatement(sql, updates1.length == 1 ? updates1[0] : QueryBuilder.unloggedBatch(updates1))
+                    .execute(pstmt, params);
+            };
         }
-        if(stmt.getSelect() != null) {
-            throw new UnsupportedOperationException("subselect not supported" + stmt);
-        }
-        if(stmt.getReturningExpressionList() != null) {
-            throw new UnsupportedOperationException("returning not supported" + stmt);
-        }
-
-        RegularStatement[] updates = stmt.getTables().stream()
-            .map(config::getTableMetadata)
-            .map(table -> WhereParser.instance(table, config).apply(stmt.getWhere())
-                .collect(() -> createAssignment(stmt, table, config), 
-                    Assignments::where, (a,b) -> { throw new IllegalStateException("no parallel"); }))
+        
+        RegularStatement[] updates2 = where.stream()
+            .map(w -> w.getClauses().stream()
+                .collect(() -> createAssignment(stmt, w.getTableMetadata(), config), 
+                    Assignments::where, this::noparallel))
             .toArray(RegularStatement[]::new);
-        return updates.length == 1 ? updates[0] : QueryBuilder.unloggedBatch(updates);
+        return new SimpleCStatement(sql, updates2.length == 1 ? updates2[0] : QueryBuilder.unloggedBatch(updates2));
     }
 
     private Assignments createAssignment(net.sf.jsqlparser.statement.update.Update stmt, TableMetadata table, ClusterConfiguration config) {
@@ -57,11 +67,31 @@ public class Update implements CqlBuilder<net.sf.jsqlparser.statement.update.Upd
         return IntStream.range(0, stmt.getColumns().size()).boxed()
             .flatMap(i ->  assignmentParser.apply(stmt.getColumns().get(i).getColumnName(), getValue(stmt, i)))
             .collect(() -> QueryBuilder.update(table).with(),
-                Assignments::and, (a,b) -> { throw new IllegalStateException("no parallel"); });
+                Assignments::and, this::noparallel);
     }
 
     private Expression getValue(net.sf.jsqlparser.statement.update.Update stmt, int idx) {
         return stmt.getExpressions().get(idx);
     }
+    
+    private static void checkNullOrEmpty(Object object) {
+        if(object == null || "".equals(object)) {
+            return;
+        } 
+        if(object instanceof Iterable && 
+            !((Iterable<?>)object).iterator().hasNext()) {
+            return;
+        }
+        unsupported();
+    }
+    
+    private static <T> T unsupported() {
+        throw new UnsupportedOperationException();
+    }
+
+    private <A,B> void noparallel(A a, B b) {
+        throw new IllegalStateException("no parallel");
+    }
+    
 
 }

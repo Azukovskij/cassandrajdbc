@@ -81,7 +81,7 @@ public class SqlToClqTranslator {
                 .map(tableMetdata -> Optional.ofNullable(tableMetdata.getColumn(name))
                     .orElseGet(() -> tableMetdata.getColumn("\"" + name + "\"")))
                 .orElseThrow(() -> new IllegalArgumentException("Column does not exist " + 
-                    table.getKeyspace().getName() + "." + table.getName() + "." + "." + columnName));
+                    table.getKeyspace().getName() + "." + table.getName() + "." + columnName));
         }
         
         public StatementOptions getStatementOptions() {

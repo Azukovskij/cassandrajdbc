@@ -6,6 +6,7 @@ import java.sql.JDBCType;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -322,6 +323,8 @@ public class CResultSetMetaData implements ResultSetMetaData {
         private final class SelectVisitor implements SelectItemVisitor, FromItemVisitor {
             
             private TableMetadata table;
+            private Map<String, TableMetadata> tables = new HashMap<>(); 
+            
             private final List<Column> columns = new ArrayList<>();
 
             @Override
@@ -334,8 +337,7 @@ public class CResultSetMetaData implements ResultSetMetaData {
 
             @Override
             public void visit(AllTableColumns all) {
-                allColumns(metadata.getKeyspace(all.getTable().getSchemaName())
-                    .getTable(all.getTable().getName()));
+                allColumns(tables.get(all.getTable().getFullyQualifiedName()));
             }
 
             @Override
@@ -359,10 +361,15 @@ public class CResultSetMetaData implements ResultSetMetaData {
 
             @Override
             public void visit(net.sf.jsqlparser.schema.Table table) {
-                this.table = Optional.ofNullable(metadata.getKeyspace(table.getSchemaName()))
+                String name = Optional.ofNullable(table.getAlias())
+                    .map(Alias::getName)
+                    .orElseGet(table::getFullyQualifiedName);
+                 TableMetadata tmeta = Optional.ofNullable(metadata.getKeyspace(table.getSchemaName()))
                     .map(ks -> ks.getTable(table.getName()))
                     .orElseThrow(() -> new IllegalStateException("Table " + table.getSchemaName() 
                         + "." + table.getName() + " does not exists"));
+                 this.tables.put(name, tmeta);
+                 this.table = tmeta;
             }
 
             @Override

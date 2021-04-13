@@ -58,7 +58,7 @@ public class CPreparedStatementExecuteTest {
             {createData(3), "SELECT * FROM " + TABLE_NAME, new MethodPointer("executeQuery"), hasResultCount(3)},
             {createData(5), null, new MethodPointer("executeQuery", "SELECT * FROM " + TABLE_NAME), hasResultCount(5)},
             // execute
-            {nodata(), "SELECT * FROM " + TABLE_NAME, new MethodPointer("execute"), equalTo(false)},
+            {nodata(), "SELECT * FROM " + TABLE_NAME, new MethodPointer("execute"), equalTo(true)},
             {createData(1), null, new MethodPointer("execute", "SELECT * FROM " + TABLE_NAME), equalTo(true)},
             {createData(1), null, new MethodPointer("execute", "SELECT * FROM " + TABLE_NAME, 1), equalTo(true)},
             {createData(1), null, new MethodPointer("execute", "SELECT * FROM " + TABLE_NAME, new int[] {1}), equalTo(true)},

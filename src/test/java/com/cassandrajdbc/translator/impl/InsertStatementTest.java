@@ -6,6 +6,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,10 +26,9 @@ import com.datastax.driver.core.Session;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners({ CassandraUnitTestExecutionListener.class })
-@CassandraDataSet(keyspace = "StatementTests", value = { "StatementTests/Tables.cql" })
+@CassandraDataSet(keyspace = "InsertStatementTest", value = { "StatementTests/Tables.cql" })
 @EmbeddedCassandra
 public class InsertStatementTest {
-
     
     @Test
     public void shouldInsertCastUuidToString() throws Exception {
@@ -55,11 +55,8 @@ public class InsertStatementTest {
         assertThat(rows.get(0).getString("value"), equalTo("some-value"));
     }
 
-    
     @Test
-    @Ignore
     public void shouldInsertFromSelect() throws Exception {
-        Session session = EmbeddedCassandraServerHelper.getSession();
         UUID id = UUID.randomUUID();
         CassandraTestConnection.executeSql("insert into InsertStatementTest.Simple (id, \"value\")"
             + " values ('" + id + "', 'value');");
@@ -67,10 +64,19 @@ public class InsertStatementTest {
             + " (select id, \"value\" as \"varchar\" from InsertStatementTest.Simple where id='" + id + "')");
     
     }
+
+    @Test
+    @Ignore
+    public void shouldInsertReturning() throws Exception {
+        UUID id = UUID.randomUUID();
+        ResultSet rs = CassandraTestConnection.executeSqlQuery("insert into InsertStatementTest.Simple (id, \"value\")"
+            + " values ('" + id + "', 'value') RETURNING *;");
+    
+    }
     
 //    [ WITH [ RECURSIVE ] with_query [, ...] ]
 //        INSERT INTO table_name [ AS alias ] [ ( column_name [, ...] ) ]
-//            { DEFAULT VALUES | VALUES ( { expression | DEFAULT } [, ...] ) [, ...] | query }
+//            { DEFAULT VALUES }
 //            [ ON CONFLICT [ conflict_target ] conflict_action ]
 //            [ RETURNING * | output_expression [ [ AS ] output_name ] [, ...] ]
 

@@ -1,5 +1,6 @@
 insert into Simple (id, "value") values (c7af1c6b-4b0f-4e0e-ae43-50183f400608, 'value-0');
 insert into Simple (id, "value") values (317476b9-391c-4ae4-992f-1f398155c6e8, 'value-1');
+insert into Simple (id, "value") values (bb81ea01-c645-4988-8ed3-1775aacb8b00, 'value-1');
 insert into Simple (id, "value") values (2fd1acc0-dfa6-4882-8f1e-7cbb773ab49a, 'value-2');
 insert into Simple (id, "value") values (f63da0c8-0ca3-4e28-9383-32a54712531f, 'value-3');
 insert into Simple (id, "value") values (fbce294f-3ac1-4922-bac1-9a50b3890b0e, 'value-4');
