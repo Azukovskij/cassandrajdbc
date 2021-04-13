@@ -496,7 +496,7 @@ public class Select implements CqlBuilder<net.sf.jsqlparser.statement.select.Sel
                 } else {
                     Optional.ofNullable(select.getAlias())
                         .ifPresent(selection.fcall(f.getName(), f.getParameters().getExpressions().stream()
-                            .map(SelectionItem::value)
+                            .map(e -> SelectionItem.value(e))
                             .toArray())::as); 
                 }
             }
