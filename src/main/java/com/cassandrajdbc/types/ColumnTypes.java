@@ -10,6 +10,7 @@ import java.sql.SQLType;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -43,6 +44,7 @@ public class ColumnTypes {
         DOUBLE(JDBCType.DOUBLE, DataType.cdouble(), Double.class),
         BOOLEAN(JDBCType.BOOLEAN, DataType.cboolean(), Boolean.class),
         BLOB(JDBCType.BLOB, DataType.blob(), byte[].class),
+        MAP(JDBCType.BLOB, DataType.map(DataType.text(), DataType.text()), Map.class),
         BINARY(JDBCType.BINARY, DataType.blob(), byte[].class);
         
         private final SQLType sqlType;

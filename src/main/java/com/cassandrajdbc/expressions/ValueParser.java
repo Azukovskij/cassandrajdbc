@@ -3,15 +3,26 @@
 package com.cassandrajdbc.expressions;
 
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
 import com.cassandrajdbc.util.MathUtil;
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.DataType;
+import com.datastax.driver.core.LocalDate;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Objects;
 
@@ -89,9 +100,33 @@ public class ValueParser extends ExpressionVisitorAdapter {
         if(col.getType() == DataType.uuid() && val instanceof String) {
             return UUID.fromString((String) val);
         }
+        if(col.getType() == DataType.date() && val instanceof String) {
+            java.time.LocalDate date = java.time.LocalDate.parse((CharSequence) val);
+            return LocalDate.fromYearMonthDay(date.getYear(), date.getMonthValue(), date.getDayOfMonth());
+        }
+        if(col.getType() == DataType.timestamp() && val instanceof String) {
+            return Date.from(parseTime((String) val));
+        }
+        if(DataType.Name.MAP.equals(col.getType().getName()) && val instanceof String) {
+            try {
+                return new JSONParser().parse((String) val);
+            } catch (ParseException e) {
+                return val;
+            }
+        }
+        if(col.getType() == DataType.blob() && val instanceof String) {
+            return ByteBuffer.wrap(val.toString().getBytes(StandardCharsets.UTF_8));
+        }
         return val;
     }
-    
+
+    private static Instant parseTime(String string) {
+        try {
+            return ZonedDateTime.parse((String)string).toInstant();
+        } catch (DateTimeParseException e) {
+            return LocalDateTime.parse((String) string).toInstant(ZoneOffset.UTC);
+        }
+    }
     
     @Override
     public void visit(SignedExpression expr) {

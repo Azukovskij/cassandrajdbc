@@ -22,6 +22,8 @@ import com.cassandrajdbc.types.codec.InputStreamCodec;
 import com.cassandrajdbc.types.codec.SqlDateCodec;
 import com.cassandrajdbc.types.codec.SqlTimeCodec;
 import com.cassandrajdbc.types.codec.SqlTimestampCodec;
+import com.cassandrajdbc.types.codec.StringBlobCodec;
+import com.cassandrajdbc.types.codec.StringMapCodec;
 import com.cassandrajdbc.types.codec.StringReaderCodec;
 import com.cassandrajdbc.types.codec.StringStreamCodec;
 import com.cassandrajdbc.types.codec.TypeCastingCodec;
@@ -95,7 +97,7 @@ public class CassandraJdbcDriver implements Driver {
         }
         registry.register(new TypeCodec[] { new SqlDateCodec(registry), new SqlTimeCodec(registry), new SqlTimestampCodec(registry),
             new ByteArrayCodec(registry), new InputStreamCodec(registry), new InputStreamCodec(registry), 
-            new StringReaderCodec(registry), new BlobCodec(registry), new StringStreamCodec(registry), new ClobCodec(registry) });
+            new StringReaderCodec(registry), new BlobCodec(registry), new StringBlobCodec(registry), new StringMapCodec(registry), new StringStreamCodec(registry), new ClobCodec(registry) });
     }
   
 

@@ -199,10 +199,10 @@ public class Select implements CqlBuilder<net.sf.jsqlparser.statement.select.Sel
             
             // order by
             if(select.getOrderByElements() != null) {
-                Optional<Comparator<Object>> sortBy = select.getOrderByElements().stream()
+                Optional<Comparator> sortBy = select.getOrderByElements().stream()
                     .flatMap(e -> Optional.ofNullable(e.getExpression()).stream().map(SelectionItem::new)
                         .map(item -> columns.indexOf(item.identity().get()))
-                        .map(i -> Comparator.comparing(r -> (Comparable)((CRow)r).getColumn(i, Object.class)))
+                        .map(i -> (Comparator)Comparator.comparing(r -> (Comparable)((CRow)r).getColumn(i, Object.class)))
                         .map(c -> e.isAsc() ? c : c.reversed())
                         .map(c -> e.getNullOrdering() == NullOrdering.NULLS_FIRST ? Comparator.nullsFirst(c) : Comparator.nullsLast(c)))
                         .reduce(Comparator::thenComparing);

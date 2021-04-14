@@ -25,7 +25,7 @@ import com.datastax.driver.core.Session;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners({ CassandraUnitTestExecutionListener.class })
-@CassandraDataSet(keyspace = "StatementTests", value = { "StatementTests/Tables.cql" })
+@CassandraDataSet(keyspace = "InsertStatementTest", value = { "StatementTests/Tables.cql" })
 @EmbeddedCassandra
 public class InsertStatementTest {
 
