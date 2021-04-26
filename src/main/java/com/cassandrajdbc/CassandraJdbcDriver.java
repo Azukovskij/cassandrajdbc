@@ -8,6 +8,7 @@ import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.util.Optional;
 import java.util.Properties;
 
 import org.slf4j.Logger;
@@ -52,8 +53,11 @@ public class CassandraJdbcDriver implements Driver {
 
     @Override
     public Connection connect(String url, Properties info) throws SQLException {
-        var cassandraUrl = CassandraURL.create(url)
-            .orElseThrow(() -> new  IllegalArgumentException("Invalid cassandra url " + url + ""));
+        var parsedUrl = CassandraURL.create(url);
+        if(parsedUrl.isEmpty()) {
+            throw new SQLException("Invalid cassandra url " + url + "");
+        }
+        var cassandraUrl = parsedUrl.get();
         var connection = CassandraConnectionFactory.instance()
             .create(cassandraUrl, info);
         configureCodecs(info, connection);
