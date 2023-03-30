@@ -75,6 +75,19 @@ public class CDatabaseMetaDataTest {
     }
 
     @Test
+    public void shouldReturnTableByDobuleQuotedMatcher() throws SQLException {
+        CDatabaseMetaData meta = getMetadata();
+        
+        assertThat(meta.getTables(null, KEYSPACE_NAME, "\"MetadataTest\"", null), resultsEqualTo(Arrays.asList(TABLE_NAME.toLowerCase()), 
+            rs -> rs.getString("TABLE_SCHEM") + "." + rs.getString("TABLE_NAME")));
+
+        assertThat(meta.getColumns(null, KEYSPACE_NAME, "\"MetadataTest\"", null), hasResultItems(Arrays.asList("id", "data"), 
+            rs -> rs.getString("COLUMN_NAME")));
+        assertThat(meta.getColumns(null, KEYSPACE_NAME, "\"MetadataTest\"", "\"data\""), resultsEqualTo(Arrays.asList("data"),
+            rs -> rs.getString("COLUMN_NAME")));
+    }
+
+    @Test
     public void shouldDescribeFunctions() throws SQLException {
         try {
             getConnection().getSession().execute("CREATE FUNCTION IF NOT EXISTS " + FUNC_NAME

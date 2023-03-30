@@ -5,3 +5,4 @@ com.cassandrajdbc.translator.impl.Update
 com.cassandrajdbc.translator.impl.Delete
 com.cassandrajdbc.translator.impl.Truncate
 com.cassandrajdbc.translator.impl.Select
+com.cassandrajdbc.translator.impl.Drop

@@ -1259,7 +1259,9 @@ class CDatabaseMetaData implements DatabaseMetaData {
     }
     
     private boolean matches(String value, String pattern) {
-        return pattern == null || value.toLowerCase().matches(pattern.toLowerCase().replace("%", ".*"));
+        return pattern == null 
+            || value.toLowerCase().matches(pattern.toLowerCase().replace("%", ".*"))
+            || ("\"" + value + "\"").equalsIgnoreCase(pattern);
     }
 
     private Comparator<Object[]> orderByColumn(int idx) {

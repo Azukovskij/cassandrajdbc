@@ -360,7 +360,8 @@ public class CResultSetMetaData implements ResultSetMetaData {
             @Override
             public void visit(net.sf.jsqlparser.schema.Table table) {
                 this.table = Optional.ofNullable(metadata.getKeyspace(table.getSchemaName()))
-                    .map(ks -> ks.getTable(table.getName()))
+                    .flatMap(ks -> Optional.ofNullable(ks.getTable(table.getName()))
+                        .or(() -> Optional.ofNullable(ks.getTable("\"" + table.getName() + "\""))))
                     .orElseThrow(() -> new IllegalStateException("Table " + table.getSchemaName() 
                         + "." + table.getName() + " does not exists"));
             }

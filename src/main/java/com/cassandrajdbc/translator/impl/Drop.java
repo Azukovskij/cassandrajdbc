@@ -8,6 +8,7 @@ import com.cassandrajdbc.translator.SqlToClqTranslator.CqlBuilder;
 import com.cassandrajdbc.translator.stmt.CStatement;
 import com.cassandrajdbc.translator.stmt.SimpleCStatement;
 import com.datastax.driver.core.RegularStatement;
+import com.datastax.driver.core.TableMetadata;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 
 import net.sf.jsqlparser.schema.Table;
@@ -26,13 +27,21 @@ public class Drop implements CqlBuilder<net.sf.jsqlparser.statement.drop.Drop> {
 
     private RegularStatement buildCql(net.sf.jsqlparser.statement.drop.Drop stmt, ClusterConfiguration config) {
         Table item = stmt.getName();
+        TableMetadata table = config.getTableMetadata(item);
         switch (stmt.getType()) {
             case "TABLE":
-                com.datastax.driver.core.schemabuilder.Drop res = SchemaBuilder.dropTable(item.getSchemaName(), item.getName());
+                com.datastax.driver.core.schemabuilder.Drop res = SchemaBuilder.dropTable(table.getKeyspace().getName(), 
+                    escape(table.getName()));
                 return stmt.isIfExists() ? res.ifExists() : res;
             default:
                 throw new UnsupportedOperationException("Dropping " + stmt.getType() + " not supported");
         }
+    }
+    
+    private String escape(String string) {
+        return string.equals(string.toLowerCase())
+            ? string
+            : "\"" + string + "\"";
     }
 
 }
