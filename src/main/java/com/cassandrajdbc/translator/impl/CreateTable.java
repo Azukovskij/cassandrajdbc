@@ -84,14 +84,11 @@ public class CreateTable implements CqlBuilder<net.sf.jsqlparser.statement.creat
     }
 
     private void addColumnSpec(ColumnDefinition col, String spec) {
-        col.setColumnSpecStrings(Optional.ofNullable(col.getColumnSpecStrings())
-            .map(ArrayList::new)
-            .orElseGet(ArrayList::new));
-        col.getColumnSpecStrings().add(spec);
+        col.addColumnSpecs(spec);
     }
 
     private List<String> getColumnSpecs(ColumnDefinition col) {
-        return Optional.ofNullable(col.getColumnSpecStrings())
+        return Optional.ofNullable(col.getColumnSpecs())
             .orElseGet(Collections::emptyList);
     }
 

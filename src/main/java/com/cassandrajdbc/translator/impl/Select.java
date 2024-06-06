@@ -47,6 +47,7 @@ import net.sf.jsqlparser.statement.select.IntersectOp;
 import net.sf.jsqlparser.statement.select.LateralSubSelect;
 import net.sf.jsqlparser.statement.select.MinusOp;
 import net.sf.jsqlparser.statement.select.OrderByElement.NullOrdering;
+import net.sf.jsqlparser.statement.select.ParenthesisFromItem;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
@@ -61,6 +62,7 @@ import net.sf.jsqlparser.statement.select.TableFunction;
 import net.sf.jsqlparser.statement.select.UnionOp;
 import net.sf.jsqlparser.statement.select.ValuesList;
 import net.sf.jsqlparser.statement.select.WithItem;
+import net.sf.jsqlparser.statement.values.ValuesStatement;
 
 public class Select implements CqlBuilder<net.sf.jsqlparser.statement.select.Select> {
     
@@ -103,7 +105,7 @@ public class Select implements CqlBuilder<net.sf.jsqlparser.statement.select.Sel
         private CStatement parse(PlainSelect plainSelect) {
             checkNullOrEmpty(plainSelect.getIntoTables());
             checkNullOrEmpty(plainSelect.getJoins());
-            checkNullOrEmpty(plainSelect.getGroupByColumnReferences());
+            checkNullOrEmpty(plainSelect.getGroupBy());
             checkNullOrEmpty(plainSelect.getHaving());
             checkNullOrEmpty(plainSelect.getFetch());
             checkNullOrEmpty(plainSelect.getSkip());
@@ -142,6 +144,10 @@ public class Select implements CqlBuilder<net.sf.jsqlparser.statement.select.Sel
             });
         }
 
+        @Override
+        public void visit(ValuesStatement aThis) {
+            unsupported();
+        }
         
         @Override
         public void visit(WithItem withItem) {
@@ -151,7 +157,6 @@ public class Select implements CqlBuilder<net.sf.jsqlparser.statement.select.Sel
         public CStatement getResult() {
             return result;
         }
-
         
     }
     
@@ -216,13 +221,14 @@ public class Select implements CqlBuilder<net.sf.jsqlparser.statement.select.Sel
                         .iterator();
                 });
             }
-            
             // offset + limit
             if(select.getOffset() != null) {
-                result = new MappingCStatement(result, res -> Iterables.skip(res, (int)select.getOffset().getOffset()));
+                Long offset = (Long) ValueParser.instance().apply(select.getOffset().getOffset());
+                result = new MappingCStatement(result, res -> Iterables.skip(res, offset.intValue()));
             }
             if(select.getLimit() != null) {
-                result = new MappingCStatement(result, res -> Iterables.limit(res, ((Long)select.getLimit().getRowCount()).intValue()));
+                Long limit = (Long)ValueParser.instance().apply(select.getLimit().getRowCount());
+                result = new MappingCStatement(result, res -> Iterables.limit(res, limit.intValue()));
             }
         }
 
@@ -280,6 +286,11 @@ public class Select implements CqlBuilder<net.sf.jsqlparser.statement.select.Sel
         private String getColumnName(TableMetadata table, Column col) {
             return config.getColumnMetadata(table, col.getColumnName()).getName();
         }
+        
+        @Override
+        public void visit(ParenthesisFromItem aThis) {
+            unsupported();
+        }
 
         @Override
         public void visit(SubSelect subSelect) {
@@ -309,6 +320,7 @@ public class Select implements CqlBuilder<net.sf.jsqlparser.statement.select.Sel
         public CStatement getResult() {
             return result;
         }
+
         
     }
     

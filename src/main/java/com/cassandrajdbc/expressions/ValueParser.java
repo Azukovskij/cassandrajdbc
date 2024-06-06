@@ -46,7 +46,6 @@ import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.TimeKeyExpression;
 import net.sf.jsqlparser.expression.TimeValue;
 import net.sf.jsqlparser.expression.TimestampValue;
-import net.sf.jsqlparser.expression.WithinGroupExpression;
 import net.sf.jsqlparser.expression.operators.arithmetic.Addition;
 import net.sf.jsqlparser.expression.operators.arithmetic.BitwiseAnd;
 import net.sf.jsqlparser.expression.operators.arithmetic.BitwiseOr;
@@ -334,11 +333,6 @@ public class ValueParser extends ExpressionVisitorAdapter {
     
     @Override
     public void visit(Modulo modulo) {
-        // TODO Auto-generated method stub
-    }
-
-    @Override
-    public void visit(WithinGroupExpression wgexpr) {
         // TODO Auto-generated method stub
     }
 

@@ -43,7 +43,7 @@ public class Update implements CqlBuilder<net.sf.jsqlparser.statement.update.Upd
             throw new UnsupportedOperationException("returning not supported" + stmt);
         }
 
-        RegularStatement[] updates = stmt.getTables().stream()
+        RegularStatement[] updates = Stream.of(stmt.getTable())
             .map(config::getTableMetadata)
             .map(table -> WhereParser.instance(table, config).apply(stmt.getWhere())
                 .collect(() -> createAssignment(stmt, table, config), 

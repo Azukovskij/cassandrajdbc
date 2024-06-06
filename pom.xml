@@ -6,7 +6,7 @@
     
     <groupId>com.cassandrajdbc</groupId>
     <artifactId>cassandra-jdbc-driver</artifactId>
-    <version>0.0.5</version>
+    <version>0.0.6</version>
 
     <build>
         <plugins>
@@ -31,7 +31,7 @@
         <dependency>
             <groupId>com.github.jsqlparser</groupId>
             <artifactId>jsqlparser</artifactId>
-            <version>0.9.6</version>
+            <version>4.5</version>
         </dependency>
         <dependency>
             <groupId>com.googlecode.json-simple</groupId>

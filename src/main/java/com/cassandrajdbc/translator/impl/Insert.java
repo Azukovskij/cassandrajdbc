@@ -17,6 +17,8 @@ import com.datastax.driver.core.TableMetadata;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.statement.select.SetOperation;
+import net.sf.jsqlparser.statement.select.SetOperationList;
 
 public class Insert implements CqlBuilder<net.sf.jsqlparser.statement.insert.Insert> {
     
@@ -30,7 +32,7 @@ public class Insert implements CqlBuilder<net.sf.jsqlparser.statement.insert.Ins
     @Override
     public CStatement translate(SqlStatement<net.sf.jsqlparser.statement.insert.Insert> stmt, ClusterConfiguration config) {
         net.sf.jsqlparser.statement.insert.Insert sql = stmt.getStatement();
-        if(sql.getSelect() != null) {
+        if(sql.getSelect() != null && !(sql.getSelect().getSelectBody() instanceof SetOperationList)) {
             return new ChainingCStatement(selectTransaltor.translate(new SqlStatement(sql.getSelect()), config), row -> {
                 // FIXME
                 

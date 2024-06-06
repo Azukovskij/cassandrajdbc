@@ -60,7 +60,7 @@ public class AlterTable implements CqlBuilder<net.sf.jsqlparser.statement.alter.
     private Stream<ColumnDataType> stream(AlterExpression col) {
         return Optional.ofNullable(col.getColDataTypeList())
             .map(columns -> col.getColumnName() == null ? columns.stream() : columns.stream().limit(1))
-            .orElseGet(() -> Stream.of(col.new ColumnDataType(col.getColumnName(), null)));
+            .orElseGet(() -> Stream.of(new ColumnDataType(col.getColumnName(), false, null, null)));
     }
     
     private String getExternalName(TableMetadata table, ClusterConfiguration config) {

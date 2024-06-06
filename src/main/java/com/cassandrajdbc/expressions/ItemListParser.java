@@ -13,6 +13,7 @@ import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.ItemsList;
 import net.sf.jsqlparser.expression.operators.relational.ItemsListVisitor;
 import net.sf.jsqlparser.expression.operators.relational.MultiExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.NamedExpressionList;
 import net.sf.jsqlparser.statement.select.SubSelect;
 
 public class ItemListParser implements ItemsListVisitor {
@@ -35,6 +36,11 @@ public class ItemListParser implements ItemsListVisitor {
     @Override
     public void visit(ExpressionList expressionList) {
         values = Arrays.asList(expressionList.getExpressions());
+    }
+
+    @Override
+    public void visit(NamedExpressionList namedExpressionList) {
+        values = Arrays.asList(namedExpressionList.getExpressions());
     }
 
     @Override

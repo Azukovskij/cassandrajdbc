@@ -34,6 +34,7 @@ import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.FromItemVisitor;
 import net.sf.jsqlparser.statement.select.LateralSubSelect;
+import net.sf.jsqlparser.statement.select.ParenthesisFromItem;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
@@ -365,6 +366,11 @@ public class CResultSetMetaData implements ResultSetMetaData {
                     .orElseThrow(() -> new IllegalStateException("Table " + table.getSchemaName() 
                         + "." + table.getName() + " does not exists"));
             }
+            
+            @Override
+            public void visit(ParenthesisFromItem aThis) {
+                throw new UnsupportedOperationException();
+            }
 
             @Override
             public void visit(ValuesList valuesList) {
@@ -404,6 +410,7 @@ public class CResultSetMetaData implements ResultSetMetaData {
                         tableMeta.getPrimaryKey().contains(c) ? columnNoNulls : columnNullable, c.getType()))
                     .forEach(columns::add);
             }
+
             
         }
         
